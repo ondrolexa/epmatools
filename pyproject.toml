@@ -13,13 +13,13 @@ build-backend = "setuptools.build_meta"
 # single source of truth for empatools's version
 [project]
 name = "empatools"
-description = "Add short description here"
+description = "Tools to manipulate EMPA analyses"
 readme = "README.md"
 maintainers = [
-    { name = "Ondrej Lexa", email = "your@email.com" },
+    { name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" },
 ]
 dynamic = ["version"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -28,6 +28,13 @@ classifiers = [
 ]
 dependencies = [
     "click",
+    "numpy",
+    "pandas",
+    "xlrd",
+    "openpyxl",
+    "matplotlib",
+    "periodictable",
+    "jupyterlab",
 ]
 
 [project.optional-dependencies]

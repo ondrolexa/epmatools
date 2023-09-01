@@ -4,6 +4,8 @@
 [![Documentation Status](https://readthedocs.org/projects/None/badge/)](https://None.readthedocs.io/)
 [![codecov](https://codecov.io/none/None/None/branch/main/graph/badge.svg)](https://codecov.io/none/None/None)
 
+Python module to manipulate EMPA analyses
+
 ## Installation
 
 The Python package `empatools` can be installed from PyPI:
