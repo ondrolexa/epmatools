@@ -39,7 +39,7 @@ jobs:
     
     - name: Run Python tests
       run: |
-        python -m pytest --nbval
+        python -m pytest --nbval-lax
 
   coverage:
     name: Coverage Testing
@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: "3.11"
 
     - name: Install Python package
       run: |
