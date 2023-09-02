@@ -23,6 +23,7 @@ empatools.datatables
 
 .. automodule:: empatools.datatables
     :members:
+    :inherited-members:
 
 empatools.minerals
 ------------------

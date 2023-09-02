@@ -1,4 +1,5 @@
 import pyparsing
+from functools import wraps
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from periodictable import formula, oxygen
@@ -79,6 +80,7 @@ def ion2props(ion):
 
 def compo(**dekwargs):
     def decorator(func):
+        @wraps(func)
         def wrapper(self, *args, **kwargs):
             df = func(self, *args, **kwargs)
             res = self._data.copy()
@@ -313,13 +315,11 @@ class Oxides(Compo):
     @property
     @compo(units="moles", desc="Cations number")
     def cat_number(self):
-        """Cations number - # moles of cation in mineral"""
         return self.props["ncat"] * self.molprop().df
 
     @property
     @compo(units="moles", desc="Oxygens number")
     def oxy_number(self):
-        """Oxygen number - # moles of oxygen in mineral"""
         return self.props["noxy"] * self.molprop().df
 
     def onf(self, noxy):
@@ -342,7 +342,7 @@ class Oxides(Compo):
 
     @compo(units="charge")
     def charges(self, ncat):
-        """Calculate charges based on number of cations
+        """Calculates charges based on number of cations
 
         Args:
             ncat (int): number of cations
@@ -353,7 +353,7 @@ class Oxides(Compo):
         )
 
     def chargedef(self, noxy, ncat):
-        """Calculate charge deficiency based on number of cations and oxygens
+        """Calculates charge deficiency based on number of cations and oxygens
 
         Args:
             noxy (int): ideal number of oxygens
