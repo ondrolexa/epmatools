@@ -1,8 +1,8 @@
 # Welcome to EMPAtools
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation Status](https://readthedocs.org/projects/None/badge/)](https://None.readthedocs.io/)
-[![codecov](https://codecov.io/none/None/None/branch/main/graph/badge.svg)](https://codecov.io/none/None/None)
+[![Documentation Status](https://readthedocs.org/projects/empatools/badge/)](https://empatools.readthedocs.io/)
+[![codecov](https://codecov.io/gh/ondrolexa/empatools/graph/badge.svg?token=KTY1CYPJSF)](https://codecov.io/gh/ondrolexa/empatools)
 
 Python module to manipulate EMPA analyses
 

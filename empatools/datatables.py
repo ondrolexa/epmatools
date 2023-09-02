@@ -35,7 +35,7 @@ em = apfu.endmembers()
 plot_grt_profile(em, percents=True)
 
 # Molecular average
-s.molprop.mean.oxwt
+s.molprop().mean.oxwt()
 
 ###################
 
@@ -86,7 +86,7 @@ def compo(**dekwargs):
             # parse kwargs
             dekwargs["units"] = dekwargs.get("units", self.units)
             dekwargs["desc"] = dekwargs.get("desc", self.desc)
-            return type(self)(res, labels=self.labels, name=self.name, **dekwargs)
+            return type(self)(res, name=self.name, **dekwargs)
 
         return wrapper
 
@@ -106,17 +106,10 @@ class Compo:
         # parse common kwargs
         self.name = kwargs.get("name", "Compo")
         self.desc = kwargs.get("desc", "Original data")
-        # set labels
-        labels = kwargs.get("labels", None)
-        label_col = kwargs.get("label_col", "Comment")
-        if labels is None:
-            if label_col in df:
-                self.labels = pd.Series([str(v) for v in df[label_col]], index=df.index)
-                df = df.drop(columns=label_col)
-            else:
-                self.labels = pd.Series([str(v) for v in df.index], index=df.index)
-        else:
-            self.labels = pd.Series([str(v) for v in labels], index=df.index)
+        # set index
+        index_col = kwargs.get("index_col", None)
+        if index_col in df:
+            df = df.reset_index(drop=True).set_index(index_col)
         self._data = df.copy()
 
     def __len__(self):
@@ -146,11 +139,32 @@ class Compo:
             self.df.mean(axis=0), name=self.name, units=self.units, desc="Average"
         )
 
+    def set_index(self, key):
+        return type(self)(
+            self._data.reset_index(
+                drop=isinstance(self._data.index, pd.RangeIndex)
+            ).set_index(key),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def reset_index(self):
+        return type(self)(
+            self._data.reset_index(),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
     def get_sample(self, s):
-        ix = self.labels.str.contains(s)
+        index = self._data.index
+        if is_numeric_dtype(index):
+            ix = index == s
+        else:
+            ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
         return type(self)(
             self._data[ix].copy(),
-            labels=self.labels[ix].copy(),
             units=self.units,
             name=self.name,
             desc=self.desc,
@@ -175,6 +189,43 @@ class Compo:
 
 
 class Oxides(Compo):
+    """A class to store oxides composition.
+
+    There are different way to create ``Oxides`` object:
+
+    - passing ``pandas.DataFrame`` with analyses in rows and oxides in columns
+    - from clipboard using ``from_clipboard()`` method
+    - from Excel using ``from_excel()`` method
+    - using ``example_data`` method
+
+    Args:
+        df (pandas.DataFrame): plunge direction of linear feature in degrees
+
+    Keyword Args:
+        units (str): units of dataset. Default is "wt%"
+        name (str): name of dataset. Default is "Compo"
+        desc (str): description of dataset. Default is "Original data"
+        index_col (str): name of column used as index. Default None
+
+    Attributes:
+        df (pandas.DataFrame): subset of dataset with only oxides columns
+        elements (pandas.DataFrame): subset of dataset with only elements columns
+        others (pandas.DataFrame): subset of dataset with other columns
+        props (pandas.DataFrame): chemical properties of present oxides
+        names (list): list of present oxides
+        sum (pandas.Series): total sum of oxides in current units
+        mean (pandas.Series): mean of oxides in current units
+        name (str): name of dataset.
+        desc (str): description of dataset.
+        cat_number (Oxides): Cations number i.e. # moles of cation in mineral
+        oxy_number (Oxides): Oxygen number i.e. # moles of oxygen in mineral
+
+    Example:
+        >>> d = Oxides(df)
+        >>> d = Oxides.from_clipboard()
+        >>> d = Oxides.from_excel('analyses.xlsx', sheet_name='Minerals', skiprows=3)
+        >>> d = Oxides.example_data()
+    """
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
@@ -203,14 +254,15 @@ class Oxides(Compo):
         return "\n".join(
             [
                 f"Oxides: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.set_index(self.labels)}",
+                f"{self.df}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.set_index(self.labels)
-            .style.set_caption(f"Oxides: {self.name} [{self.units}] - {self.desc}")
+            self.df.style.set_caption(
+                f"Oxides: {self.name} [{self.units}] - {self.desc}"
+            )
             .format(precision=4)
             .to_html()
         )
@@ -229,33 +281,29 @@ class Oxides(Compo):
     def elements(self):
         return self._data[self._elements].copy()
 
-    @property
     @compo(units="mol%")
     def molprop(self):
-        """Oxides molar proportions"""
+        """Convert oxides weight percents to molar proportions"""
         assert self.units == "wt%", "Oxides must be weight percents"
         return self.df.div(self.props["mass"])
 
-    @property
     @compo(units="wt%")
     def oxwt(self):
-        """Oxides weight percents"""
+        """Convert oxides molar proportions to weight percents"""
         assert self.units == "mol%", "Oxides must be molar percents"
         return self.df.mul(self.props["mass"])
 
-    @property
     @compo(desc="Elemental weight")
     def elwt(self):
-        """Elements weight percents"""
+        """Convert oxides weight percents to elements weight percents"""
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
         return res
 
-    @property
     @compo(desc="Elemental weight")
     def elwt_oxy(self):
-        """Elements weight percents including oxygen"""
+        """Convert oxides weight percents to elements weight percents incl. oxygen"""
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
@@ -266,13 +314,13 @@ class Oxides(Compo):
     @compo(units="moles", desc="Cations number")
     def cat_number(self):
         """Cations number - # moles of cation in mineral"""
-        return self.props["ncat"] * self.molprop.df
+        return self.props["ncat"] * self.molprop().df
 
     @property
     @compo(units="moles", desc="Oxygens number")
     def oxy_number(self):
         """Oxygen number - # moles of oxygen in mineral"""
-        return self.props["noxy"] * self.molprop.df
+        return self.props["noxy"] * self.molprop().df
 
     def onf(self, noxy):
         """Oxygen normalisation factor - ideal oxygens / sum of oxygens
@@ -328,7 +376,6 @@ class Oxides(Compo):
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
                 df,
-                labels=self.labels,
                 desc=f"Cations p.f.u based on {ncat} cations",
             )
         else:
@@ -336,7 +383,6 @@ class Oxides(Compo):
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
                 df,
-                labels=self.labels,
                 desc=f"Cations p.f.u based on {noxy} oxygens",
             )
 
@@ -345,7 +391,7 @@ class Oxides(Compo):
 
         Keyword Args:
             mineral (Mineral): instance of mineral. If provided, cations are
-                based on mineral structural formula
+            based on mineral structural formula
             tocat (bool): when True normalized to ncat, otherwise to noxy. Default False
 
         """
@@ -360,7 +406,7 @@ class Oxides(Compo):
             return APFU(
                 df,
                 mineral=mineral,
-                labels=self.labels,
+                name=self.name,
                 desc=f"Cations p.f.u based on {ncat} cations",
             )
         else:
@@ -369,7 +415,7 @@ class Oxides(Compo):
             return APFU(
                 df,
                 mineral=mineral,
-                labels=self.labels,
+                name=self.name,
                 desc=f"Cations p.f.u based on {noxy} oxygens",
             )
 
@@ -378,7 +424,7 @@ class Oxides(Compo):
 
         Keyword Args:
             mineral (Mineral): instance of mineral. If provided, cations are
-                based on mineral structural formula
+            based on mineral structural formula
             tocat (bool): when True normalized to ncat, otherwise to noxy. Default False
             force (bool): when True, remaining cations are added to last site
 
@@ -394,13 +440,13 @@ class Oxides(Compo):
             res = self._data.copy()
             res["Fe2O3"] = Fe2to3 * res["FeO"]
             res = res.drop(columns="FeO")
-            return Oxides(res, labels=self.labels, name=self.name, desc="Fe converted")
+            return Oxides(res, name=self.name, desc="Fe converted")
         elif ("Fe2O3" in self.names) and ("FeO" not in self.names):
             Fe3to2 = 2 * formula("FeO").mass / formula("Fe2O3").mass
             res = self._data.copy()
             res["FeO"] = Fe3to2 * res["Fe2O3"]
             res = res.drop(columns="Fe2O3")
-            return Oxides(res, labels=self.labels, name=self.name, desc="Fe converted")
+            return Oxides(res, name=self.name, desc="Fe converted")
         else:
             print("No Fe in data. Nothing changed")
             return self
@@ -449,7 +495,7 @@ class Oxides(Compo):
         ncharge = charge / ncat
         df = ncharge.mul(mws).mul(self.cat_number.sum, axis="rows").div(ncats)
         res[df.columns] = df
-        return Oxides(res, labels=self.labels, desc="Fe corrected")
+        return Oxides(res, name=self.name, desc="Fe corrected")
 
     def apatite_correction(self):
         """Apatite correction
@@ -460,7 +506,7 @@ class Oxides(Compo):
         """
         assert self.units == "wt%", "Oxides must be weight percents"
         if ("P2O5" in self.names) and ("CaO" in self.names):
-            df = self.molprop.normalize(to=1).df
+            df = self.molprop().normalize(to=1).df
             df["CaO"] = (df["CaO"] - 3.33 * df["P2O5"]).clip(lower=0)
             df = df.drop(columns="P2O5")
             mws = self.props["mass"].drop(labels="P2O5")
@@ -468,7 +514,7 @@ class Oxides(Compo):
             df = df.div(df.sum(axis=1), axis=0).mul(self.sum, axis=0)
             res = self._data.copy().drop(columns="P2O5")
             res[df.columns] = df
-            return Oxides(res, labels=self.labels, desc="ap corrected")
+            return Oxides(res, name=self.name, desc="ap corrected")
         else:
             print("Not Ca and P in data. Nothing changed")
             return self
@@ -491,37 +537,37 @@ class Oxides(Compo):
         else:
             return err
 
-    @classmethod
-    def from_clipboard(cls, label_col="Comment", vertical=False):
-        if vertical:
-            df = pd.read_clipboard().T
-            labels = df.index
-            df = df.reset_index(drop=True)
-            print(df)
-            print(labels)
-            return cls(df, labels=labels)
-        else:
-            df = pd.read_clipboard(index_col=False)
-            return cls(df, label_col=label_col)
-
     def table(self, add_total=True, transpose=True):
         df = self.df
         if add_total:
             df["Total"] = self.sum
-        df.index = self.labels
         if transpose:
             df = df.T
         return df
 
     @classmethod
-    def from_upsg_empa(cls, filename, label_col="Comment", **kwargs):
+    def from_clipboard(cls, index_col="Comment", vertical=False):
+        df = pd.read_clipboard(index_col=False)
+        if vertical:
+            df = df.set_index(df.columns[0]).T
+            df.columns.name = None
+        return cls(df, index_col=index_col)
+
+    @classmethod
+    def from_excel(cls, filename, **kwargs):
+        index_col = kwargs.pop("index_col", None)
+        df = pd.read_excel(filename, **kwargs)
+        return cls(df, index_col=index_col)
+
+    @classmethod
+    def from_upsg_empa(cls, filename, index_col="Comment", **kwargs):
         if "skiprows" not in kwargs:
             kwargs["skiprows"] = 3
         if "skipfooter" not in kwargs:
             kwargs["skipfooter"] = 6
         kwargs["index_col"] = False
         df = pd.read_excel(filename, **kwargs)
-        return cls(df, label_col=label_col)
+        return cls(df, index_col=index_col)
 
     @classmethod
     def example_data(cls, sample="ex"):
@@ -544,7 +590,7 @@ class Oxides(Compo):
                 "F":{"0":0.367,"1":0.313,"2":0.017,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0,"10":0.0,"11":0.0,"12":0.0,"13":0.0,"14":0.0,"15":0.0},
                 "Cl":{"0":0.368,"1":0.335,"2":0.196,"3":0.065,"4":0.014,"5":0.023,"6":0.0,"7":0.004,"8":0.014,"9":0.0,"10":0.0,"11":0.007,"12":0.0,"13":0.014,"14":0.013,"15":0.0},
                 "Total":{"0":95.467,"1":95.173,"2":87.475,"3":96.458,"4":97.784,"5":98.418,"6":100.74,"7":100.752,"8":100.124,"9":99.756,"10":100.456,"11":97.834,"12":97.07,"13":96.844,"14":94.612,"15":94.159},
-                "Comment":{"0":"LX448A-bt-01 ","1":"LX448A-bt-02 ","2":"LX448A-chl-04 ","3":"LX448A-pa-05 ","4":"LX448A-cd-06 ","5":"LX448A-cd-07 ","6":"LX448A-pl-08 ","7":"LX448A-g-09 ","8":"LX448A-g-10 ","9":"LX448A-pl-22 ","10":"LX448A-pl-23 ","11":"LX449A-st-33 ","12":"LX449A-st-34 ","13":"LX449A-st-35 ","14":"LX450E-ms-49 ","15":"LX450E-ms-50 "}  # noqa: E501
+                "Comment":{"0":"bt-01","1":"bt-02","2":"chl-04","3":"pa-05","4":"cd-06","5":"cd-07","6":"pl-08","7":"g-09","8":"g-10","9":"pl-22","10":"pl-23","11":"st-33","12":"st-34","13":"st-35","14":"ms-49","15":"ms-50"}  # noqa: E501
             },
             pyroxenes={
                 "SiO2": {"0": 45.33, "1": 45.64, "2": 45.43, "3": 45.42, "4": 45.0},
@@ -594,7 +640,7 @@ class Oxides(Compo):
 
 
 class Ions(Compo):
-    def __init__(self, df, **kwargs):  # mineral=None, labels=None, desc="Default"):
+    def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
         self.units = kwargs.get("units", "atoms")
@@ -629,14 +675,13 @@ class Ions(Compo):
         return "\n".join(
             [
                 f"Ions: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.set_index(self.labels)}",
+                f"{self.df}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.set_index(self.labels)
-            .style.set_caption(f"Ions: {self.name} [{self.units}] - {self.desc}")
+            self.df.style.set_caption(f"Ions: {self.name} [{self.units}] - {self.desc}")
             .format(precision=4)
             .to_html()
         )
@@ -645,14 +690,13 @@ class Ions(Compo):
         df = self.df
         if add_total:
             df["Total"] = self.sum
-        df.index = self.labels
         if transpose:
             df = df.T
         return df
 
 
 class APFU(Ions):
-    def __init__(self, df, **kwargs):  # mineral=None, labels=None, desc="Default"):
+    def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
         self.mineral = kwargs["mineral"]
@@ -661,14 +705,13 @@ class APFU(Ions):
         return "\n".join(
             [
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.set_index(self.labels)}",
+                f"{self.df}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.set_index(self.labels)
-            .style.set_caption(
+            self.df.style.set_caption(
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}"
             )
             .format(precision=4)
@@ -692,7 +735,7 @@ class APFU(Ions):
             res = []
             for ix, row in self.df.iterrows():
                 res.append(self.mineral.endmembers(row, force=force))
-            return pd.DataFrame(res, index=self.labels)
+            return pd.DataFrame(res, index=self.df.index)
         else:
             raise TypeError(f"{self.mineral} has no endmembers")
 
@@ -712,7 +755,7 @@ class APFU(Ions):
             return Ions(
                 pd.DataFrame(res, index=self._data.index),
                 mineral=self.mineral,
-                labels=self.labels,
+                name=self.name,
                 desc=self.desc,
             )
         else:
@@ -743,7 +786,6 @@ class APFU(Ions):
             df["Total"] = self.sum
         ox = pd.Series(len(self) * [self.mineral.noxy], index=df.index, name="Oxygen")
         df = pd.concat([ox, df], axis=1)
-        df.index = self.labels
         if transpose:
             df = df.T
         return df
