@@ -115,6 +115,7 @@ class Compo:
         self._data = df.copy()
 
     def __len__(self):
+        """Return number of data in datatable"""
         return self._data.shape[0]
 
     @property
@@ -142,6 +143,12 @@ class Compo:
         )
 
     def set_index(self, key):
+        """Set index of datatable
+
+        Args:
+            key (str or list like): Either name of column (see ``Oxides.others``) or
+            collection of same length as datatable
+        """
         return type(self)(
             self._data.reset_index(
                 drop=isinstance(self._data.index, pd.RangeIndex)
@@ -152,6 +159,7 @@ class Compo:
         )
 
     def reset_index(self):
+        """Reset index to default pandas.RangeIndex"""
         return type(self)(
             self._data.reset_index(),
             units=self.units,
@@ -160,6 +168,15 @@ class Compo:
         )
 
     def get_sample(self, s):
+        """Select subset of data from datatable
+
+        Args:
+            s (str or int): When string, returns all data which contain string in
+            index. When numeric returns single record.
+
+        Returns:
+            Oxides: slected data as datatable
+        """
         index = self._data.index
         if is_numeric_dtype(index):
             ix = index == s
@@ -173,6 +190,15 @@ class Compo:
         )
 
     def to_latex(self, add_total=True, transpose=True, precision=2):
+        """Convert datatable to LaTeX representation
+
+        Args:
+            add_total (bool, optional): Add column `"Total"` with total sums.
+            Default `True`
+            transpose (bool, optional): Place samples as columns. Default ``True``
+            precision (bool, optional): Nimber of decimal places. Default 2
+
+        """
         return (
             self.table(add_total=add_total, transpose=transpose)
             .fillna("")
@@ -185,6 +211,15 @@ class Compo:
         return pd.DataFrame(self._props, index=self.names)
 
     def to_clipboard(self, add_total=True, transpose=True):
+        """Copy table to clipboard
+
+        Args:
+            add_total (bool, optional): Add column `"Total"` with total sums.
+            Default `True`
+            transpose (bool, optional): Place samples as columns. Default ``True``
+            precision (bool, optional): Nimber of decimal places. Default 2
+
+        """
         df = self.table(add_total=add_total, transpose=transpose)
         df.to_clipboard(excel=True)
         print("Copied to clipboard.")
@@ -193,32 +228,31 @@ class Compo:
 class Oxides(Compo):
     """A class to store oxides composition.
 
-    There are different way to create ``Oxides`` object:
+    There are different way to create `Oxides` object:
 
-    - passing ``pandas.DataFrame`` with analyses in rows and oxides in columns
+    - passing `pandas.DataFrame` with analyses in rows and oxides in columns
     - from clipboard using ``from_clipboard()`` method
     - from Excel using ``from_excel()`` method
     - using ``example_data`` method
 
     Args:
         df (pandas.DataFrame): plunge direction of linear feature in degrees
-
-    Keyword Args:
-        units (str): units of dataset. Default is "wt%"
-        name (str): name of dataset. Default is "Compo"
-        desc (str): description of dataset. Default is "Original data"
-        index_col (str): name of column used as index. Default None
+        units (str, optional): units of datatable. Default is `"wt%"`
+        name (str, optional): name of datatable. Default is `"Compo"`
+        desc (str, optional): description of datatable. Default is `"Original data"`
+        index_col (str, optional): name of column used as index. Default ``None``
 
     Attributes:
-        df (pandas.DataFrame): subset of dataset with only oxides columns
-        elements (pandas.DataFrame): subset of dataset with only elements columns
-        others (pandas.DataFrame): subset of dataset with other columns
+        df (pandas.DataFrame): subset of datatable with only oxides columns
+        units (str): units of data
+        elements (pandas.DataFrame): subset of datatable with only elements columns
+        others (pandas.DataFrame): subset of datatable with other columns
         props (pandas.DataFrame): chemical properties of present oxides
         names (list): list of present oxides
         sum (pandas.Series): total sum of oxides in current units
         mean (pandas.Series): mean of oxides in current units
-        name (str): name of dataset.
-        desc (str): description of dataset.
+        name (str): name of datatable.
+        desc (str): description of datatable.
         cat_number (Oxides): Cations number i.e. # moles of cation in mineral
         oxy_number (Oxides): Oxygen number i.e. # moles of oxygen in mineral
 
@@ -227,6 +261,7 @@ class Oxides(Compo):
         >>> d = Oxides.from_clipboard()
         >>> d = Oxides.from_excel('analyses.xlsx', sheet_name='Minerals', skiprows=3)
         >>> d = Oxides.example_data()
+
     """
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
@@ -274,7 +309,10 @@ class Oxides(Compo):
         """Normalize the values
 
         Args:
-            to: desired sum. Default 100
+            to (it or float): desired sum. Default 100
+
+        Returns:
+            Oxides: normalized datatable
 
         """
         return to * self.df.div(self.sum, axis=0)
@@ -285,19 +323,34 @@ class Oxides(Compo):
 
     @compo(units="mol%")
     def molprop(self):
-        """Convert oxides weight percents to molar proportions"""
+        """Convert oxides weight percents to molar proportions
+
+        Returns:
+            Oxides: molar proportions datatable
+
+        """
         assert self.units == "wt%", "Oxides must be weight percents"
         return self.df.div(self.props["mass"])
 
     @compo(units="wt%")
     def oxwt(self):
-        """Convert oxides molar proportions to weight percents"""
+        """Convert oxides molar proportions to weight percents
+
+        Returns:
+            Oxides: weight percents datatable
+
+        """
         assert self.units == "mol%", "Oxides must be molar percents"
         return self.df.mul(self.props["mass"])
 
     @compo(desc="Elemental weight")
     def elwt(self):
-        """Convert oxides weight percents to elements weight percents"""
+        """Convert oxides weight percents to elements weight percents
+
+        Returns:
+            Oxides: elements weight percents datatable
+
+        """
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
@@ -305,7 +358,12 @@ class Oxides(Compo):
 
     @compo(desc="Elemental weight")
     def elwt_oxy(self):
-        """Convert oxides weight percents to elements weight percents incl. oxygen"""
+        """Convert oxides weight percents to elements weight percents incl. oxygen
+
+        Returns:
+            Oxides: elements weight percents datatable
+
+        """
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
@@ -328,6 +386,9 @@ class Oxides(Compo):
         Args:
             noxy (int): ideal oxygens
 
+        Returns:
+            pandas.Series: oxygen normalisation factors
+
         """
         return noxy / self.oxy_number.sum
 
@@ -336,6 +397,9 @@ class Oxides(Compo):
 
         Args:
             ncat (int): ideal cations
+
+        Returns:
+            pandas.Series: cation normalisation factors
 
         """
         return ncat / self.cat_number.sum
@@ -346,6 +410,9 @@ class Oxides(Compo):
 
         Args:
             ncat (int): number of cations
+
+        Returns:
+            Oxides: charges datatable
 
         """
         return (
@@ -359,16 +426,23 @@ class Oxides(Compo):
             noxy (int): ideal number of oxygens
             ncat (int): ideal number of cations
 
+        Returns:
+            pandas.Series: charge deficiency values
+
         """
         return 2 * noxy - self.charges(ncat).sum
 
     def cations(self, noxy=1, ncat=1, tocat=False):
         """Cations calculated on the basis of oxygens or cations
 
-        Keyword Args:
-            noxy (int): ideal number of oxygens. Default 1
-            ncat (int): ideal number of cations. Default 1
-            tocat (bool): when True normalized to ncat, otherwise to noxy. Default False
+        Args:
+            noxy (int, optional): ideal number of oxygens. Default 1
+            ncat (int, optional): ideal number of cations. Default 1
+            tocat (bool, optional): when ``True`` normalized to ``ncat``,
+            otherwise to ``noxy``. Default ``False``
+
+        Returns:
+            Ions: cations datatable
 
         """
         if tocat:
@@ -389,10 +463,13 @@ class Oxides(Compo):
     def apfu(self, mineral, tocat=False):
         """Cations calculated on the basis of mineral formula
 
-        Keyword Args:
-            mineral (Mineral): instance of mineral. If provided, cations are
-            based on mineral structural formula
-            tocat (bool): when True normalized to ncat, otherwise to noxy. Default False
+        Args:
+            mineral (Mineral): instance of mineral
+            tocat (bool, optional): when ``True`` normalized to ``mineral.ncat``,
+            otherwise to ``mineral.noxy``. Default ``False``
+
+        Returns:
+            APFU: a.p.f.u datatable
 
         """
         noxy, ncat = mineral.noxy, mineral.ncat
@@ -422,18 +499,29 @@ class Oxides(Compo):
     def mineral_endmembers(self, mineral, tocat=False, force=False):
         """Calculate mineral end-members
 
-        Keyword Args:
-            mineral (Mineral): instance of mineral. If provided, cations are
-            based on mineral structural formula
-            tocat (bool): when True normalized to ncat, otherwise to noxy. Default False
-            force (bool): when True, remaining cations are added to last site
+        Args:
+            mineral (Mineral): instance of mineral.
+            tocat (bool, optional): when True normalized to ncat, otherwise to noxy.
+            Default False
+            force (bool, optional): when True, remaining cations are added to last site
+
+        Returns:
+            pandas.DataFrame: calculated endmembers
 
         """
         apfu = self.apfu(mineral, tocat=tocat)
         return apfu.endmembers(force=force)
 
     def convert_Fe(self):
-        """Recalculate FeO to Fe2O3 or vice-versa"""
+        """Recalculate FeO to Fe2O3 or vice-versa
+
+        Note: When only FeO exists, all is recalculated to Fe2O3. When only Fe2O3
+        exists, all is recalculated to FeO. Otherwise datatable is not changed.
+
+        Returns:
+            Oxides: datatable with converted Fe
+
+        """
         assert self.units == "wt%", "Oxides must be weight percents"
         if ("Fe2O3" not in self.names) and ("FeO" in self.names):
             Fe2to3 = formula("Fe2O3").mass / formula("FeO").mass / 2
@@ -458,7 +546,11 @@ class Oxides(Compo):
             noxy (int): ideal number of oxygens. Default 1
             ncat (int): ideal number of cations. Default 1
 
-        Note: noxy could be also instance of Mineral
+        Note: Either both FeO and Fe2O3 are present or any of then, the composition
+        is modified to fullfil charge balance for given cations and oxygens.
+
+        Returns:
+            Oxides: datatable with recalculated Fe
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
@@ -503,6 +595,9 @@ class Oxides(Compo):
         Note: All P2O5 is assumed to be apatite based and is removed from composition
         CaO mol% = CaO mol% - 3.33 * P2O5 mol%
 
+        Returns:
+            Oxides: apatite corrected datatable
+
         """
         assert self.units == "wt%", "Oxides must be weight percents"
         if ("P2O5" in self.names) and ("CaO" in self.names):
@@ -522,13 +617,16 @@ class Oxides(Compo):
     def check_cations(self, noxy, ncat, confidence=None):
         """Return normalized error of calculated cations
 
+        err = [ncat - #cat(noxy)]/ncat
+
         Args:
             noxy (int): number of oxygens
             ncat (int): number of cations
+            confidence (float, optional): if not ``None``, returns booleans with
+            ``True``, where error is within confidence
 
-        Keyword Args:
-            confidence (float): if not None, returns boolean vector with True, where
-                error is within confidence
+        Returns:
+            pandas.Series: boolean or normalized errors
 
         """
         err = abs(ncat - self.cations(noxy=noxy).sum) / ncat
@@ -538,6 +636,7 @@ class Oxides(Compo):
             return err
 
     def table(self, add_total=True, transpose=True):
+        # helper for exports
         df = self.df
         if add_total:
             df["Total"] = self.sum
@@ -546,7 +645,23 @@ class Oxides(Compo):
         return df
 
     @classmethod
-    def from_clipboard(cls, index_col="Comment", vertical=False):
+    def from_clipboard(cls, index_col=None, vertical=False):
+        """Parse datatable from clipboard.
+
+        Note: By default, oxides should be arranged in columns with one line header
+        containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
+        available as ``Oxides.others`` and are not used for calculations.
+
+        Args:
+            index_col (str or None, optional): name of the columns used for index.
+            Default None.
+            vertical (bool, optional): Set ``True`` when oxides are aranged in rows.
+            Default ``False``
+
+        Returns:
+            Oxides: datatable
+
+        """
         df = pd.read_clipboard(index_col=False)
         if vertical:
             df = df.set_index(df.columns[0]).T
@@ -555,6 +670,21 @@ class Oxides(Compo):
 
     @classmethod
     def from_excel(cls, filename, **kwargs):
+        """Read datatable from Excel file.
+
+        Note: Oxides must be arranged in columns with one line header
+        containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
+        available as ``Oxides.others`` and are not used for calculations.
+
+        Args:
+            filename (str): string path to file. For other possibility see
+            ``pandas.read_excel``
+            **kwargs: all keyword arguments are passed to ``pandas.read_excel``
+
+        Returns:
+            Oxides: datatable
+
+        """
         index_col = kwargs.pop("index_col", None)
         df = pd.read_excel(filename, **kwargs)
         return cls(df, index_col=index_col)
@@ -570,10 +700,20 @@ class Oxides(Compo):
         return cls(df, index_col=index_col)
 
     @classmethod
-    def example_data(cls, sample="ex"):
+    def example_data(cls, sample="default"):
+        """Get exemple datatable
+
+        Args:
+            sample (str, optional): Name of sample, on of the `"default"`,
+            `"pyroxenes"`, `"avgpelite"` or `"grt_profile"`. Default is `"default"`
+
+        Returns:
+            Oxides: datatable
+
+        """
         # fmt: off
         examples = dict(
-            ex = {
+            default = {
                 "SiO2":{"0":37.218,"1":37.363,"2":23.748,"3":46.986,"4":48.389,"5":48.87,"6":61.839,"7":37.816,"8":37.584,"9":60.657,"10":61.338,"11":28.057,"12":27.565,"13":27.091,"14":46.078,"15":45.487},
                 "Al2O3":{"0":20.349,"1":20.037,"2":22.152,"3":39.183,"4":32.414,"5":32.696,"6":24.661,"7":21.184,"8":21.311,"9":25.087,"10":25.025,"11":53.95,"12":53.885,"13":53.841,"14":35.793,"15":35.669},
                 "MgO":{"0":13.784,"1":14.106,"2":9.611,"3":0.151,"4":8.227,"5":8.39,"6":0.0,"7":4.189,"8":4.651,"9":0.001,"10":0.015,"11":2.04,"12":1.972,"13":2.099,"14":0.652,"15":0.803},
@@ -640,6 +780,38 @@ class Oxides(Compo):
 
 
 class Ions(Compo):
+    """A class to store cations composition.
+
+    There are different way to create ``Ions`` object:
+
+    - passing ``pandas.DataFrame`` with analyses in rows and cations in columns. Note,
+      that cations needs to by defined with charge e.g. `"Si{4+}"`, `"Na{+}"`
+      or `"O{2-}"`
+    - calculated from ``Oxides`` datatable
+
+    Args:
+        df (pandas.DataFrame): plunge direction of linear feature in degrees
+        units (str, optional): units of datatable. Default is `"wt%"`
+        name (str, optional): name of datatable. Default is `"Compo"`
+        desc (str, optional): description of datatable. Default is `"Original data"`
+        index_col (str, optional): name of column used as index. Default ``None``
+
+    Attributes:
+        df (pandas.DataFrame): subset of datatable with only ions columns
+        units (str): units of data
+        others (pandas.DataFrame): subset of datatable with other columns
+        props (pandas.DataFrame): chemical properties of present ions
+        names (list): list of present ions
+        sum (pandas.Series): total sum of oxides in current units
+        mean (pandas.Series): mean of oxides in current units
+        name (str): name of datatable.
+        desc (str): description of datatable.
+
+    Example:
+        >>> d = Ions(df)
+        >>> d = Oxides.cations(noxy=12, ncat=8)
+
+    """
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
@@ -696,10 +868,45 @@ class Ions(Compo):
 
 
 class APFU(Ions):
-    def __init__(self, df, **kwargs):
+    """A class to store cations p.f.u for mineral.
+
+    There are different way to create ``APFU`` object:
+
+    - passing ``pandas.DataFrame`` with analyses in rows and cations in columns. Note,
+      that cations needs to by defined with charge e.g. `"Si{4+}"`, `"Na{+}"`
+      or `"O{2-}"`
+    - calculated from ``Oxides`` datatable
+
+    Args:
+        df (pandas.DataFrame): plunge direction of linear feature in degrees
+        mineral (Mineral): mineral used for formula calculations. See `empatools.mindb`
+        units (str, optional): units of datatable. Default is `"wt%"`
+        name (str, optional): name of datatable. Default is `"Compo"`
+        desc (str, optional): description of datatable. Default is `"Original data"`
+        index_col (str, optional): name of column used as index. Default ``None``
+
+    Attributes:
+        df (pandas.DataFrame): subset of datatable with only ions columns
+        mineral (Mineral): mineral used for formula calculations
+        units (str): units of data
+        others (pandas.DataFrame): subset of datatable with other columns
+        props (pandas.DataFrame): chemical properties of present ions
+        names (list): list of present ions
+        sum (pandas.Series): total sum of oxides in current units
+        mean (pandas.Series): mean of oxides in current units
+        name (str): name of datatable.
+        desc (str): description of datatable.
+        reminder (APFU): Returns remaining atoms after mineral formula occupation
+
+    Example:
+        >>> d = APFU(df)
+        >>> d = Oxides.apfu(mindb.Garnet_Fe2())
+
+    """
+    def __init__(self, df, mineral, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
-        self.mineral = kwargs["mineral"]
+        self.mineral = mineral
 
     def __repr__(self):
         return "\n".join(
@@ -725,10 +932,8 @@ class APFU(Ions):
     def endmembers(self, force=False):
         """Calculate endmembers proportions
 
-        Note: Ions instance must be based on mineral
-
-        Keyword Args:
-            force (bool): when True, remaining cations are added to last site
+        Args:
+            force (bool, optional): when True, remaining cations are added to last site
 
         """
         if self.mineral.has_endmembers:
@@ -744,8 +949,8 @@ class APFU(Ions):
 
         Note: Ions instance must be based on mineral
 
-        Keyword Args:
-            force (bool): when True, remaining cations are added to last site
+        Args:
+            force (bool, optional): when True, remaining cations are added to last site
 
         """
         if self.mineral.has_structure:
@@ -763,15 +968,14 @@ class APFU(Ions):
 
     @property
     def reminder(self):
-        """Returns remaining atoms after mineral formula occupation"""
         return self.df - self.mineral_apfu().df
 
     def check_formula(self, confidence=None):
         """Return normalized error of calculated cations
 
-        Keyword Args:
-            confidence (float): if not None, returns boolean vector with True, where
-                error is within confidence
+        Args:
+            confidence (float, optional): if not None, returns boolean vector with True,
+            where error is within confidence
 
         """
         err = abs(self.mineral.ncat - self.sum) / self.mineral.ncat
