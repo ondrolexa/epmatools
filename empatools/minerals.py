@@ -178,32 +178,6 @@ class Garnet_Fe3(Mineral):
         )
         return pd.Series(em)
 
-    # def endmembers2(self):
-    #     apfu = self.apfu
-    #     A = np.array(
-    #         [
-    #             apfu["Ca{2+}"],
-    #             apfu["Mg{2+}"],
-    #             apfu["Fe{2+}"] + apfu["Fe{3+}"],
-    #             apfu["Cr{3+}"],
-    #             apfu["Mn{2+}"],
-    #             apfu["Al{3+}"],
-    #         ]
-    #     )
-    #     M = np.array(
-    #         [
-    #             [0, 0, 3, 0, 0, 2],
-    #             [0, 3, 0, 0, 0, 2],
-    #             [0, 0, 0, 0, 3, 2],
-    #             [3, 0, 0, 0, 0, 2],
-    #             [3, 0, 2, 0, 0, 0],
-    #             [3, 0, 0, 2, 0, 0],
-    #         ]
-    #     )
-    #     em = A @ np.linalg.inv(M)
-    #     em = em / em.sum()
-    #     return pd.Series(em, index=["Alm", "Prp", "Sps", "Grs", "Adr", "Uv"])
-
 
 class Feldspar(Mineral):
     """Feldspar with 3 endmembers"""
@@ -229,11 +203,7 @@ class Feldspar(Mineral):
 
 
 class Pyroxene_Fe2(Mineral):
-    """Pyroxen using total Fe with 3 endmembers
-
-    Note: Normalization procedure follows Morimoto et al. (1988)
-
-    """
+    """Pyroxen using total Fe with 3 endmembers"""
 
     def __init__(self):
         self.noxy = 6
@@ -257,11 +227,7 @@ class Pyroxene_Fe2(Mineral):
 
 
 class Pyroxene_Fe3(Mineral):
-    """Pyroxene with Na-Cr with 6 endmembers
-
-    Note: Normalization procedure follows Morimoto et al. (1988)
-
-    """
+    """Pyroxene with Na-Cr with 6 endmembers"""
 
     def __init__(self):
         self.noxy = 6

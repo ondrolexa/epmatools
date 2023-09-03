@@ -1,0 +1,34 @@
+name: empatools
+
+channels:
+  - conda-forge # get things from conda-forge first
+  - defaults
+
+dependencies:
+  - python=3.11
+  # pandas and scientific python
+  - click
+  - numpy
+  - pandas
+  - xlrd
+  - openpyxl
+  - matplotlib
+  - periodictable
+  # Tools
+  - jupyter
+  - jupyterlab
+  - jupyterlab-spellchecker
+  - jupyterlab_code_formatter
+  - ipykernel
+  - pip
+  - pip:
+    - -e . # install the local empatools package
+
+# mamba create -f environment.yml
+# python -m ipykernel install --user --name empatools
+
+# mamba activate empatools
+
+# mamba deactivate empatools
+# mamba remove -n pyrolite
+# jupyter kernelspec uninstall empatools
