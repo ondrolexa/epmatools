@@ -30,6 +30,7 @@ empatools.minerals
 
 .. automodule:: empatools.minerals
     :members:
+    :inherited-members:
 
 empatools.plotting
 ------------------

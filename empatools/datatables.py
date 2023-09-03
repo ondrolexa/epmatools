@@ -420,7 +420,9 @@ class Oxides(Compo):
 
         """
         noxy, ncat = mineral.noxy, mineral.ncat
-        if mineral.needsFe3:
+        if mineral.needsFe == "Fe2":
+            dt = self.convert_Fe()
+        elif mineral.needsFe == "Fe3":
             dt = self.recalculate_Fe(noxy, ncat)
         else:
             dt = self
@@ -459,32 +461,41 @@ class Oxides(Compo):
         apfu = self.apfu(mineral, tocat=tocat)
         return apfu.endmembers(force=force)
 
-    def convert_Fe(self):
+    def convert_Fe(self, to="FeO"):
         """Recalculate FeO to Fe2O3 or vice-versa
 
         Note:
             When only FeO exists, all is recalculated to Fe2O3. When only Fe2O3
-            exists, all is recalculated to FeO. Otherwise datatable is not changed.
+            exists, all is recalculated to FeO. When both exists, Fe2O3 is
+            recalculated and added to FeO. Otherwise datatable is not changed.
+
+        Args:
+            to (str): to what iron oxide Fe should be converted. Default `"FeO"`
 
         Returns:
-            Oxides: datatable with converted Fe
+            Oxides: datatable with converted Fe oxide
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        if ("Fe2O3" not in self.names) and ("FeO" in self.names):
-            Fe2to3 = formula("Fe2O3").mass / formula("FeO").mass / 2
-            res = self._data.copy()
-            res["Fe2O3"] = Fe2to3 * res["FeO"]
-            res = res.drop(columns="FeO")
-            return Oxides(res, name=self.name, desc="Fe converted")
-        elif ("Fe2O3" in self.names) and ("FeO" not in self.names):
+        if (to == "FeO") and ("Fe2O3" in self.names):
             Fe3to2 = 2 * formula("FeO").mass / formula("Fe2O3").mass
             res = self._data.copy()
-            res["FeO"] = Fe3to2 * res["Fe2O3"]
+            if "FeO" in self.names:
+                res["FeO"] += Fe3to2 * res["Fe2O3"]
+            else:
+                res["FeO"] = Fe3to2 * res["Fe2O3"]
             res = res.drop(columns="Fe2O3")
             return Oxides(res, name=self.name, desc="Fe converted")
+        elif (to == "Fe2O3") and ("FeO" in self.names):
+            Fe2to3 = formula("Fe2O3").mass / formula("FeO").mass / 2
+            res = self._data.copy()
+            if "Fe2O3" in self.names:
+                res["Fe2O3"] += Fe2to3 * res["FeO"]
+            else:
+                res["Fe2O3"] = Fe2to3 * res["FeO"]
+            res = res.drop(columns="FeO")
+            return Oxides(res, name=self.name, desc="Fe converted")
         else:
-            print("No Fe in data. Nothing changed")
             return self
 
     def recalculate_Fe(self, noxy, ncat):
@@ -543,7 +554,7 @@ class Oxides(Compo):
 
         Note:
             All P2O5 is assumed to be apatite based and is removed from composition
-            
+
                 `CaO mol% = CaO mol% - 3.33 * P2O5 mol%`
 
         Returns:
@@ -897,7 +908,7 @@ class APFU(Ions):
                 res.append(self.mineral.endmembers(row, force=force))
             return pd.DataFrame(res, index=self.df.index)
         else:
-            raise TypeError(f"{self.mineral} has no endmembers")
+            raise TypeError(f"{self.mineral} has no endmembers method defined")
 
     def mineral_apfu(self, force=False):
         """Calculate apfu from structural formula
@@ -920,7 +931,7 @@ class APFU(Ions):
                 desc=self.desc,
             )
         else:
-            raise TypeError(f"{self.mineral} has no structure")
+            raise TypeError(f"{self.mineral} has no structure defined")
 
     @property
     def reminder(self):
