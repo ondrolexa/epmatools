@@ -11,35 +11,36 @@ def plot_grt_profile(
     percents=False,
     xlabel=None,
     filename=None,
-    maxticks=26
+    maxticks=26,
 ):
     """Plot garnet profiles.
 
-        Note: endmembers have to be properly ordered
+    Note:
+        Endmembers have to be properly ordered.
 
-        Args:
-            em (pandas.DataFrame): endmembers
-            twin (bool, optional): When ``True``, the plot has two independent y-axes
+    Args:
+        em (pandas.DataFrame): endmembers
+        twin (bool, optional): When ``True``, the plot has two independent y-axes
             for better scaling. Endmembers must be separated into two groups using
             `data1` and `data2` args. When ``False`` both groups are plotted on same
             axes. Default ``True``
-            data1 (list, optional): list of endmember names in first group. Default 
+        data1 (list, optional): list of endmember names in first group. Default
             `["Prp", "Grs", "Sps"]`
-            data2 (list, optional): list of endmember names in first group.
+        data2 (list, optional): list of endmember names in first group.
             Default `["Alm"]`
-            datalim1 (tuple, optional): y-axis limits for first axis or auto when
+        datalim1 (tuple, optional): y-axis limits for first axis or auto when
             ``None``. Default ``None``
-            datalim2 (tuple, optional): y-axis limits for second axis or auto when
+        datalim2 (tuple, optional): y-axis limits for second axis or auto when
             ``None``. Default ``None``
-            percents (bool): When ``True`` y-axes scale is percents, otherwise fraction
-            xlabel (str, optional): label of the x-axis. Defauly ``None``
-            filename (str, optional): When not ``None``, the plot is saved to file,
+        percents (bool): When ``True`` y-axes scale is percents, otherwise fraction
+        xlabel (str, optional): label of the x-axis. Defauly ``None``
+        filename (str, optional): When not ``None``, the plot is saved to file,
             otherwise the plot is shown.
-            maxticks (int): maximum number of ticks on x-axis. Default 26
+        maxticks (int): maximum number of ticks on x-axis. Default 26
 
     """
     if percents:
-        em = 100*em
+        em = 100 * em
         unit = " [%]"
     else:
         unit = " [prop.]"
@@ -87,4 +88,3 @@ def plot_grt_profile(
     else:
         plt.show()
     plt.close(fig)
-

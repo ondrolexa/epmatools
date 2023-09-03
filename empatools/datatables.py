@@ -5,60 +5,6 @@ from pandas.api.types import is_numeric_dtype
 from periodictable import formula, oxygen
 from periodictable.core import ision
 
-"""
-from petrotools import Oxides
-import minerals as m
-
-d = Oxides.example_data()
-c = d.get_sample('-g-')
-
-garnet = m.Garnet_Fe2()
-
-apfu = c.apfu(garnet)
-
-apfu.endmembers()
-
-#######################################
-
-from petrotools import Oxides
-import minerals as m
-from plotting import plot_grt_profile
-
-fn = '/home/ondro/Active/Bodonchin/Petro/230804-Mongol/230804-analyses.xlsx'
-
-d = Oxides.from_upsg_empa(fn, sheet_name='GRT')
-s = d.get_sample('LX449A')
-
-garnet = m.Garnet_Fe2()
-
-apfu = s.apfu(garnet)
-em = apfu.endmembers()
-plot_grt_profile(em, percents=True)
-
-# Molecular average
-s.molprop().mean.oxwt()
-
-###################
-
-from petrotools import Oxides
-import minerals as m
-
-fn = '/home/ondro/Active/Bodonchin/Petro/230804-Mongol/230804-analyses.xlsx'
-
-d = Oxides.from_upsg_empa(fn, skipfooter=0, sheet_name='OTHER')
-p = d.get_sample('pl')
-
-plg = m.Feldspar()
-p.mineral_endmembers(plg)
-
-############
-
-from petrotools import Oxides
-import minerals as m
-
-d = Oxides.from_clipboard()
-"""
-
 
 def oxide2props(f):
     ncat, element = f.structure[0]
@@ -147,7 +93,7 @@ class Compo:
 
         Args:
             key (str or list like): Either name of column (see ``Oxides.others``) or
-            collection of same length as datatable
+                collection of same length as datatable
         """
         return type(self)(
             self._data.reset_index(
@@ -172,7 +118,7 @@ class Compo:
 
         Args:
             s (str or int): When string, returns all data which contain string in
-            index. When numeric returns single record.
+                index. When numeric returns single record.
 
         Returns:
             Oxides: slected data as datatable
@@ -194,7 +140,7 @@ class Compo:
 
         Args:
             add_total (bool, optional): Add column `"Total"` with total sums.
-            Default `True`
+                Default `True`
             transpose (bool, optional): Place samples as columns. Default ``True``
             precision (bool, optional): Nimber of decimal places. Default 2
 
@@ -215,7 +161,7 @@ class Compo:
 
         Args:
             add_total (bool, optional): Add column `"Total"` with total sums.
-            Default `True`
+                Default `True`
             transpose (bool, optional): Place samples as columns. Default ``True``
             precision (bool, optional): Nimber of decimal places. Default 2
 
@@ -244,9 +190,9 @@ class Oxides(Compo):
 
     Attributes:
         df (pandas.DataFrame): subset of datatable with only oxides columns
-        units (str): units of data
+            units (str): units of data
         elements (pandas.DataFrame): subset of datatable with only elements columns
-        others (pandas.DataFrame): subset of datatable with other columns
+            others (pandas.DataFrame): subset of datatable with other columns
         props (pandas.DataFrame): chemical properties of present oxides
         names (list): list of present oxides
         sum (pandas.Series): total sum of oxides in current units
@@ -263,6 +209,7 @@ class Oxides(Compo):
         >>> d = Oxides.example_data()
 
     """
+
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
@@ -439,7 +386,7 @@ class Oxides(Compo):
             noxy (int, optional): ideal number of oxygens. Default 1
             ncat (int, optional): ideal number of cations. Default 1
             tocat (bool, optional): when ``True`` normalized to ``ncat``,
-            otherwise to ``noxy``. Default ``False``
+                otherwise to ``noxy``. Default ``False``
 
         Returns:
             Ions: cations datatable
@@ -466,7 +413,7 @@ class Oxides(Compo):
         Args:
             mineral (Mineral): instance of mineral
             tocat (bool, optional): when ``True`` normalized to ``mineral.ncat``,
-            otherwise to ``mineral.noxy``. Default ``False``
+                otherwise to ``mineral.noxy``. Default ``False``
 
         Returns:
             APFU: a.p.f.u datatable
@@ -502,7 +449,7 @@ class Oxides(Compo):
         Args:
             mineral (Mineral): instance of mineral.
             tocat (bool, optional): when True normalized to ncat, otherwise to noxy.
-            Default False
+                Default False
             force (bool, optional): when True, remaining cations are added to last site
 
         Returns:
@@ -515,8 +462,9 @@ class Oxides(Compo):
     def convert_Fe(self):
         """Recalculate FeO to Fe2O3 or vice-versa
 
-        Note: When only FeO exists, all is recalculated to Fe2O3. When only Fe2O3
-        exists, all is recalculated to FeO. Otherwise datatable is not changed.
+        Note:
+            When only FeO exists, all is recalculated to Fe2O3. When only Fe2O3
+            exists, all is recalculated to FeO. Otherwise datatable is not changed.
 
         Returns:
             Oxides: datatable with converted Fe
@@ -546,8 +494,9 @@ class Oxides(Compo):
             noxy (int): ideal number of oxygens. Default 1
             ncat (int): ideal number of cations. Default 1
 
-        Note: Either both FeO and Fe2O3 are present or any of then, the composition
-        is modified to fullfil charge balance for given cations and oxygens.
+        Note:
+            Either both FeO and Fe2O3 are present or any of then, the composition
+            is modified to fullfil charge balance for given cations and oxygens.
 
         Returns:
             Oxides: datatable with recalculated Fe
@@ -592,8 +541,10 @@ class Oxides(Compo):
     def apatite_correction(self):
         """Apatite correction
 
-        Note: All P2O5 is assumed to be apatite based and is removed from composition
-        CaO mol% = CaO mol% - 3.33 * P2O5 mol%
+        Note:
+            All P2O5 is assumed to be apatite based and is removed from composition
+            
+                `CaO mol% = CaO mol% - 3.33 * P2O5 mol%`
 
         Returns:
             Oxides: apatite corrected datatable
@@ -623,7 +574,7 @@ class Oxides(Compo):
             noxy (int): number of oxygens
             ncat (int): number of cations
             confidence (float, optional): if not ``None``, returns booleans with
-            ``True``, where error is within confidence
+                ``True``, where error is within confidence
 
         Returns:
             pandas.Series: boolean or normalized errors
@@ -648,15 +599,16 @@ class Oxides(Compo):
     def from_clipboard(cls, index_col=None, vertical=False):
         """Parse datatable from clipboard.
 
-        Note: By default, oxides should be arranged in columns with one line header
-        containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
-        available as ``Oxides.others`` and are not used for calculations.
+        Note:
+            By default, oxides should be arranged in columns with one line header
+            containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
+            available as ``Oxides.others`` and are not used for calculations.
 
         Args:
             index_col (str or None, optional): name of the columns used for index.
-            Default None.
+                Default None.
             vertical (bool, optional): Set ``True`` when oxides are aranged in rows.
-            Default ``False``
+                Default ``False``
 
         Returns:
             Oxides: datatable
@@ -672,13 +624,14 @@ class Oxides(Compo):
     def from_excel(cls, filename, **kwargs):
         """Read datatable from Excel file.
 
-        Note: Oxides must be arranged in columns with one line header
-        containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
-        available as ``Oxides.others`` and are not used for calculations.
+        Note:
+            Oxides must be arranged in columns with one line header
+            containing case-sensitive oxides formula (e.g. Al2O3). All other columns are
+            available as ``Oxides.others`` and are not used for calculations.
 
         Args:
             filename (str): string path to file. For other possibility see
-            ``pandas.read_excel``
+                ``pandas.read_excel``
             **kwargs: all keyword arguments are passed to ``pandas.read_excel``
 
         Returns:
@@ -705,7 +658,7 @@ class Oxides(Compo):
 
         Args:
             sample (str, optional): Name of sample, on of the `"default"`,
-            `"pyroxenes"`, `"avgpelite"` or `"grt_profile"`. Default is `"default"`
+                `"pyroxenes"`, `"avgpelite"` or `"grt_profile"`. Default is `"default"`
 
         Returns:
             Oxides: datatable
@@ -812,6 +765,7 @@ class Ions(Compo):
         >>> d = Oxides.cations(noxy=12, ncat=8)
 
     """
+
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
@@ -903,6 +857,7 @@ class APFU(Ions):
         >>> d = Oxides.apfu(mindb.Garnet_Fe2())
 
     """
+
     def __init__(self, df, mineral, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
@@ -947,7 +902,8 @@ class APFU(Ions):
     def mineral_apfu(self, force=False):
         """Calculate apfu from structural formula
 
-        Note: Ions instance must be based on mineral
+        Note:
+            Ions instance must be based on mineral
 
         Args:
             force (bool, optional): when True, remaining cations are added to last site
@@ -975,7 +931,7 @@ class APFU(Ions):
 
         Args:
             confidence (float, optional): if not None, returns boolean vector with True,
-            where error is within confidence
+                where error is within confidence
 
         """
         err = abs(self.mineral.ncat - self.sum) / self.mineral.ncat

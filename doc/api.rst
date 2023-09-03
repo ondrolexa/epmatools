@@ -3,8 +3,6 @@ User API
 
 .. toctree::
 
-EMPAtools provides following modules:
-
 .. note::
     The common classes ``Oxides``, ``Ions`` and ``APFU`` could be imported
     directly from main namespace, e.g.:
@@ -17,6 +15,8 @@ EMPAtools provides following modules:
     For interactive use you can import all above using:
 
         >>> from empatools import *
+
+EMPAtools provides following modules:
 
 empatools.datatables
 --------------------
