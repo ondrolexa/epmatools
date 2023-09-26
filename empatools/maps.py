@@ -254,7 +254,6 @@ class Mapset:
         maps (list): List of all available maps in sample.
         masks (list): List of all available masks in sample.
         active_mask (str): Name of active mask or None.
-        mask (numpy.ndarray): Active data mask as 2D boolean numpy array.
         element_maps (list): List of all elemental maps in sample.
         total_counts (nump.ndarray): 2d array of total elemental count. It is
             sum of all elemental maps.
@@ -264,7 +263,7 @@ class Mapset:
         name (str, optional): Name of the sample.
         aspect (float): Aspect of the axis scaling, i.e. the ratio of y-unit to
                 x-unit.
-        mask (numpy.ndarray, optional): 2D array representing data mask.
+        mask (numpy.ndarray): Active data mask as 2D boolean numpy array.
         clusters (numpy.array): Clusters from KMeans clustering.
         centers (numpy.array): Centers from KMeans clustering.
         labels (numpy.array): Labels from Agglomerative clustering.

@@ -37,3 +37,14 @@ empatools.plotting
 
 .. automodule:: empatools.plotting
     :members:
+
+To work with EDS maps you can use ``maps`` module. The class ``MapStore`` could be used
+for H5 storage of your maps, allowing quick access of yout data. Individual dataset are
+manipulated using ``Mapset`` class:
+
+empatools.maps
+--------------
+
+.. automodule:: empatools.maps
+    :members:
+    :inherited-members:
