@@ -29,10 +29,14 @@ classifiers = [
 dependencies = [
     "click",
     "numpy",
+    "matplotlib",
+    "scipy",
+    "h5py",
     "pandas",
+    "scikit-learn",
+    "colorcet",
     "xlrd",
     "openpyxl",
-    "matplotlib",
     "periodictable",
     "jupyterlab",
 ]

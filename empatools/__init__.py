@@ -5,4 +5,10 @@ from empatools.datatables import Oxides, Ions, APFU
 import empatools.minerals as mindb
 import empatools.plotting as minplot
 
-__all__ = ("Oxides", "Ions", "APFU", "mindb", "minplot")
+__all__ = (
+    "Oxides",
+    "Ions",
+    "APFU",
+    "mindb",
+    "minplot",
+)

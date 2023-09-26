@@ -190,9 +190,9 @@ class Oxides(Compo):
 
     Attributes:
         df (pandas.DataFrame): subset of datatable with only oxides columns
-            units (str): units of data
+        units (str): units of data
         elements (pandas.DataFrame): subset of datatable with only elements columns
-            others (pandas.DataFrame): subset of datatable with other columns
+        others (pandas.DataFrame): subset of datatable with other columns
         props (pandas.DataFrame): chemical properties of present oxides
         names (list): list of present oxides
         sum (pandas.Series): total sum of oxides in current units
