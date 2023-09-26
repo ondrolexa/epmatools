@@ -738,14 +738,24 @@ class Mapset:
             to create phase map.
 
         Args:
-            n_kmeans (int): NUmber of clusters to be created. Default 256
+            n_kmeans (int): Number of clusters to be created. Default 256
+            ignore (list): List of elements to be ignored for KMeans
+                clustering. Default []
+            zscore (bool): Transform values to zscore before clustering.
+                Default False
 
         Additional keyword arguments are passed to aggclusters() method.
+
         """
         n_kmeans = kwargs.get("n_kmeans", 256)
+        ignore = kwargs.get("ignore", [])
+        use = list(set(self.element_maps) - set(ignore))
+        dt = pd.DataFrame(np.array([self.values(el) for el in use]).T, columns=use)
+        if kwargs.get("zscore", False):
+            dt = dt.apply(stats.zscore)
         kmeans = KMeans(n_clusters=n_kmeans, n_init=10)
         print("Clustering, please wait...")
-        self.clusters = kmeans.fit_predict(self.element_df)
+        self.clusters = kmeans.fit_predict(dt)
         self.centers = kmeans.cluster_centers_
         self.aggclusters(**kwargs)
 
@@ -815,17 +825,20 @@ class Mapset:
         df["Counts"] = self.total_counts[mask].flatten().astype(int)
         return df
 
-    def get_label_mask(self, *args):
+    def get_label_mask(self, *args, invert=False):
         """Get mask corresponding to given class(es) from Agglomerative clustering.
 
         Args:
             value (int): Any number of classes to be used for mask
+            invert (bool): Invert mask. Default False
 
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters() method."
         mask = np.full(self.img.shape, False)
         for v in args:
             mask = np.logical_or(mask, self.img == v)
+        if invert:
+            mask = np.invert(mask)
         return mask
 
     def label_info(self, sorted=False):
@@ -854,6 +867,21 @@ class Mapset:
             )
         else:
             return res.dropna(how="all", subset=elements)
+
+    def get_phase_mask(self, phase, invert=False):
+        """Get mask corresponding to given phase from legend.
+
+        Args:
+            phase (str): Name of phase. Must be in legend
+            invert (bool): Invert mask. Default False
+
+        """
+        assert phase in self.legend.store, f"Phase {phase} not found in legend."
+        mask = self.get_label_mask(*self.legend.store[phase]['values'])
+        if invert:
+            mask = np.invert(mask)
+        return mask
+
 
     def phase_info(self, sorted=False, **kwargs):
         """Returns averaged values for each phase from legend as Pandas DataFrame.
