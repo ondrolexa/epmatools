@@ -11,7 +11,7 @@ def plot_grt_profile(
     percents=False,
     xlabel=None,
     filename=None,
-    maxticks=26,
+    maxticks=20,
 ):
     """Plot garnet profiles.
 
@@ -36,7 +36,7 @@ def plot_grt_profile(
         xlabel (str, optional): label of the x-axis. Defauly ``None``
         filename (str, optional): When not ``None``, the plot is saved to file,
             otherwise the plot is shown.
-        maxticks (int): maximum number of ticks on x-axis. Default 26
+        maxticks (int): maximum number of ticks on x-axis. Default 20
 
     """
     if percents:
