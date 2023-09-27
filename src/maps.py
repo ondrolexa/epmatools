@@ -17,6 +17,7 @@ import pandas as pd
 import h5py
 from scipy import stats
 from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.preprocessing import FunctionTransformer
 
 
 class MapStore:
@@ -752,9 +753,9 @@ class Mapset:
     ### Class methods for phase mapping
 
     def create_clusters(self, **kwargs):
-        """Calculate KMeans of all elemental maps
+        """Calculate KMeans clustering of elemental maps
 
-        clusters and centers are calculated by this method.
+        To selects initial cluster centroids, k-means++ is used.
 
         Note: KMeans are used for subsequent Agglomerative clustering
             to create phase map.
@@ -764,6 +765,8 @@ class Mapset:
             ignore (list): List of elements to be ignored for KMeans
                 clustering. Default []
             zscore (bool): Transform values to zscore before clustering.
+                Default False
+            log1p (bool): Logarithmic transform of values before clustering.
                 Default False
 
         Additional keyword arguments are passed to aggclusters() method.
@@ -775,10 +778,16 @@ class Mapset:
         dt = pd.DataFrame(np.array([self.values(el) for el in use]).T, columns=use)
         if kwargs.get("zscore", False):
             dt = dt.apply(stats.zscore)
-        kmeans = KMeans(n_clusters=n_kmeans, n_init=10)
+        if kwargs.get("log1p", False):
+            tr = FunctionTransformer(
+                np.log1p, validate=True, feature_names_out="one-to-one"
+            ).fit(dt)
+            dt = pd.DataFrame(tr.transform(dt), columns=tr.get_feature_names_out())
+        kmeans = KMeans(n_clusters=n_kmeans, init="k-means++", n_init="auto")
         print("Clustering, please wait...")
         self.clusters = kmeans.fit_predict(dt)
         self.centers = kmeans.cluster_centers_
+        self.legend = MapLegend(**kwargs)
         self.aggclusters(**kwargs)
 
     def aggclusters(self, **kwargs):
@@ -788,9 +797,8 @@ class Mapset:
             n_clusters (int): Number of classes to be created. Default is
                 n_clusters defined in Mapset.legend
 
-        Note: When n_clusters is provided and is different from Mapset.legend
-            n_clusters value, the sample legend is re-initialized. If sample
-            legend is None, the default one is created.
+        Note: When n_clusters is provided and is different from active legend
+            n_clusters value, the sample legend is re-initialized.
 
         Additional keyword arguments are passsed for MapLegend()
 
@@ -799,8 +807,6 @@ class Mapset:
             self.clusters is not None
         ), "Mapset not yet clustered. Use create_clusters() method."
 
-        if self.legend is None:
-            self.legend = MapLegend(**kwargs)
         n_clusters = kwargs.get("n_clusters", self.legend.n_clusters)
         hierarchical_cluster = AgglomerativeClustering(
             n_clusters=n_clusters, metric="euclidean", linkage="ward"
@@ -867,6 +873,9 @@ class Mapset:
         """Returns averaged values for each class of Agglomerative clustering
         as Pandas DataFrame.
 
+        Note: When particular class has legend label, the name of the phase is
+        added to result.
+
         Args:
             sorted (bool): Whether to sort according to class proportion
         """
@@ -912,23 +921,29 @@ class Mapset:
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters method."
         dfs = []
-        for phase in self.legend.store:
-            df = self.phase_df(phase)
-            df["Phase"] = phase
-            dfs.append(df)
-        df = pd.concat(dfs)
-        dfg = df.groupby("Phase")
-        mn = dfg.mean()
-        elements = self.element_df.columns
-        res = pd.concat(
-            (100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0), mn["Counts"]),
-            axis=1,
-        )
-        res["Prop"] = 100 * dfg.size() / np.count_nonzero(~self.mask)
-        if sorted:
-            return res.sort_values("Prop", ascending=False)
+        if self.legend.store:
+            for phase in self.legend.store:
+                df = self.phase_df(phase)
+                df["Phase"] = phase
+                dfs.append(df)
+            df = pd.concat(dfs)
+            dfg = df.groupby("Phase")
+            mn = dfg.mean()
+            elements = self.element_df.columns
+            res = pd.concat(
+                (
+                    100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0),
+                    mn["Counts"],
+                ),
+                axis=1,
+            )
+            res["Prop"] = 100 * dfg.size() / np.count_nonzero(~self.mask)
+            if sorted:
+                return res.sort_values("Prop", ascending=False)
+            else:
+                return res
         else:
-            return res
+            print("The legend has no entry. Use MapLegend.add method...")
 
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
