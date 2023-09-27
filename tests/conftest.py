@@ -4,4 +4,4 @@ from empatools import Oxides
 
 @pytest.fixture
 def data():
-    return Oxides.example_data().set_index("Comment")
+    return Oxides.from_examples('minerals').set_index("Comment")
