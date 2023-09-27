@@ -1,9 +1,10 @@
-import numpy as np
 from pathlib import Path
+import importlib.resources
 import re
 import json
 import colorcet as cc  # noqa: F401
 import periodictable
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -202,6 +203,27 @@ class MapStore:
                     print(f"No clustering stored for sample {sample.name}.")
         else:
             print(f"Mapset {sample.name} not exists in MapStore.")
+
+    @classmethod
+    def from_examples(cls, example=None):
+        """Get example MapStore
+
+        Args:
+            example (str, optional): Name of example. When None, available examples
+                are printed. Default is `None`
+
+        Returns:
+            Oxides: datatable
+
+        """
+        resources = importlib.resources.files("empatools") / "data"
+        datapath = resources / "maps"
+        if example is None:
+            print(f"Available examples: {[f.stem for f in datapath.glob('*.h5')]}")
+        else:
+            fname = (datapath / example).with_suffix(".h5")
+            assert fname.exists(), "Example {example} do not exists."
+            return cls(str(fname))
 
 
 class Mapset:
@@ -624,7 +646,7 @@ class Mapset:
         cdfclip = kwargs.get("cdfclip", (2, 98))
         title = kwargs.get("title", "Total element counts" if expr is None else expr)
         if self.active_mask is not None:
-            title += f' [{self.active_mask}]'
+            title += f" [{self.active_mask}]"
         colorbar = kwargs.get("colorbar", True)
         dt = self.get_map(expr)
         if kwargs.get("zscore", False):
@@ -877,11 +899,10 @@ class Mapset:
 
         """
         assert phase in self.legend.store, f"Phase {phase} not found in legend."
-        mask = self.get_label_mask(*self.legend.store[phase]['values'])
+        mask = self.get_label_mask(*self.legend.store[phase]["values"])
         if invert:
             mask = np.invert(mask)
         return mask
-
 
     def phase_info(self, sorted=False, **kwargs):
         """Returns averaged values for each phase from legend as Pandas DataFrame.

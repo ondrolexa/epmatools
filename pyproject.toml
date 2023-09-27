@@ -60,13 +60,13 @@ docs = [
 [project.scripts]
 empatools = "empatools.__main__:main"
 
-# The following section contains setuptools-specific configuration
-# options. For a full reference of available options, check the overview
-# at https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [tool.setuptools]
 packages = [
     "empatools",
 ]
+
+[tool.setuptools.package-dir]
+empatools = "src"
 
 # Configure setuptools_scm, which extracts the version number from
 # the version control system. For more information see its documentation:
@@ -74,7 +74,7 @@ packages = [
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "node-and-date"
-write_to = "empatools/_version.py"
+write_to = "src/_version.py"
 
 # The following is the configuration for the pytest test suite
 [tool.pytest.ini_options]
