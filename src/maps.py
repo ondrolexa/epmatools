@@ -1,6 +1,5 @@
 from pathlib import Path
 import importlib.resources
-import re
 import json
 import colorcet as cc  # noqa: F401
 import periodictable
@@ -50,14 +49,17 @@ class MapStore:
             for name in self.samples:
                 samplestore = hf.get(name)
                 nmaps = len(samplestore.get("maps").keys())
+                shape = tuple(samplestore.attrs["shape"])
                 nmasks = len(samplestore.get("masks").keys())
                 if "kmeans" in samplestore:
                     kmeans = "Yes"
                 else:
                     kmeans = "No"
-                res.append([nmaps, nmasks, kmeans])
+                res.append([nmaps, shape[0], shape[1], nmasks, kmeans])
         return pd.DataFrame(
-            res, index=self.samples, columns=["Maps", "Masks", "Clustered"]
+            res,
+            index=self.samples,
+            columns=["Maps", "Rows", "Cols", "Masks", "Clustered"],
         )
 
     def get_sample(self, name):
@@ -74,7 +76,6 @@ class MapStore:
                 masks = {}
                 samplestore = hf.get(name)
                 # attributes
-                shape = tuple(samplestore.attrs["shape"])
                 aspect = float(samplestore.attrs["aspect"])
                 active_mask = samplestore.attrs["active_mask"]
                 if active_mask == "":
@@ -83,12 +84,10 @@ class MapStore:
                 mapstore = samplestore.get("maps")
                 for element in mapstore.keys():
                     vals = np.array(mapstore.get(element))
-                    assert shape == vals.shape, f"Wrong data shape for map {element}"
                     maps[element] = vals
                 maskstore = samplestore.get("masks")
                 for mask in maskstore.keys():
                     vals = np.array(maskstore.get(mask))
-                    assert shape == vals.shape, f"Wrong data shape for mask {mask}"
                     masks[mask] = vals
                 if "kmeans" in samplestore:
                     kmeanstore = samplestore.get("kmeans")
@@ -105,7 +104,6 @@ class MapStore:
                     legend = None
             return Mapset(
                 maps,
-                shape,
                 name=name,
                 aspect=aspect,
                 masks=masks,
@@ -253,7 +251,6 @@ class Mapset:
         maps (dict): Collection of maps stored in dictionary.
             The key is the name of the map (e.g. element name)
             and map itself have to be 2D numpy.ndarray.
-        shape (tuple): (rows, cols) tuple of maps shape.
         name (str, optional): Name of the sample. Default is 'default'.
         aspect (float): Aspect of the axis scaling, i.e. the ratio of y-unit to
                 x-unit. Default 1
@@ -263,7 +260,7 @@ class Mapset:
         clusters (numpy.array): Clusters from KMeans clustering. Defaut is None
         centers (numpy.array): Centers from KMeans clustering. Defaut is None
         labels (numpy.array): Labels from Agglomerative clustering. Defaut is None
-        img (numpy.array): Reshaped Agglomerative labels. Defaut is None
+        img (numpy.array): 2D array of Agglomerative labels. Defaut is None
         legend (edstool.MapLegend): Legend for phase map. Defaut is None
         default_cmap (str): Name of default matplotlib colormap. Default is 'inferno'.
         figsize (tuple): Default figure size. Default is (8, 6).
@@ -290,7 +287,7 @@ class Mapset:
         clusters (numpy.array): Clusters from KMeans clustering.
         centers (numpy.array): Centers from KMeans clustering.
         labels (numpy.array): Labels from Agglomerative clustering.
-        img (numpy.array): Reshaped Agglomerative labels.
+        img (numpy.array): 2D array of Agglomerative labels.
         legend (edstool.MapLegend): Legend for phase map.
         default_cmap (str): Name of default matplotlib colormap.
         figsize (tuple): Default figure size.
@@ -298,9 +295,14 @@ class Mapset:
 
     """
 
-    def __init__(self, maps, shape, **kwargs):
+    def __init__(self, maps, **kwargs):
+        assert isinstance(maps, dict), "Argument maps must be dictionary"
+        # check shapes
+        itmap = iter(maps)
+        self.shape = maps[next(itmap)].shape
+        for el in itmap:
+            assert maps[el].shape == self.shape, "Shape of all maps must be same"
         self.__maps = maps
-        self.shape = shape
         # defaults
         self.__masks = kwargs.get("masks", {})
         self.__active_mask = None
@@ -325,19 +327,23 @@ class Mapset:
         )
 
     def __getitem__(self, name):
-        return self.__maps[name].astype("float")
+        if name in self:
+            return self.__maps[name].astype("float")
+        else:
+            print(f"There is no map {name} in mapset")
 
     def __setitem__(self, name, data):
         assert isinstance(data, np.ndarray), "Argument must be NumPy array"
-        if self.shape is None:
-            self.shape = data.shape
         assert (
             self.shape == data.shape
-        ), f"Data shape do not match sample shape {self.shape}"
+        ), f"Data shape do not match mapset shape {self.shape}"
         self.__maps[name] = data
 
     def __delitem__(self, name):
-        del self.__maps[name]
+        if name in self:
+            del self.__maps[name]
+        else:
+            print(f"There is no map {name} in mapset")
 
     def __contains__(self, name):
         return name in self.__maps
@@ -468,7 +474,7 @@ class Mapset:
         assert mask.dtype == bool, "Mask must be boolean array"
         assert (
             self.shape == mask.shape
-        ), f"Mask shape do not match sample shape {self.shape}"
+        ), f"Mask shape do not match mapset shape {self.shape}"
         if name in self.__masks:
             if kwargs.get("overwrite", False):
                 self.__masks[name] = mask
@@ -541,7 +547,7 @@ class Mapset:
         f.tight_layout()
         selector = PolygonSelector(ax, lambda *args: None)
         plt.show()
-        ny, nx = dt.shape
+        ny, nx = self.shape
         x, y = np.meshgrid(np.arange(nx), np.arange(ny))
         x, y = x.flatten(), y.flatten()
         pp = mplPath(selector.verts)
@@ -580,11 +586,7 @@ class Mapset:
         kwargs["masks"] = masks
         if "active_mask" not in kwargs:
             kwargs["active_mask"] = self.active_mask
-        return Mapset(
-            maps,
-            (rmax - rmin, cmax - cmin),
-            **kwargs,
-        )
+        return Mapset(maps, **kwargs)
 
     def randomclip(self, rows, cols, **kwargs):
         """Clip randomly placed rectangular area
@@ -959,7 +961,7 @@ class Mapset:
         def format_coord(x, y):
             col = round(x)
             row = round(y)
-            nrows, ncols, _ = RGBA.shape
+            nrows, ncols, _ = self.shape
             if 0 <= col < ncols and 0 <= row < nrows:
                 if transpose:
                     if self.mask.T[row, col]:
@@ -1013,161 +1015,6 @@ class Mapset:
         if filename is not None:
             f.savefig(filename, dpi=300)
         plt.show()
-
-    ### Class methods to read data
-
-    @classmethod
-    def from_line_data_separated(cls, src, **kwargs):
-        src = Path(src)
-        assert src.is_dir(), "Source path must be dir"
-        linedirs = [p for p in src.iterdir() if p.is_dir()]
-        # identify prefix and suffix
-        stems = [ld.stem for ld in linedirs]
-        n = 0
-        while all([ld.startswith(stems[0][:n]) for ld in stems]):
-            n += 1
-        prefix = stems[0][: n - 1]
-        n = 0
-        while all([ld.endswith(stems[0][::-1][:n][::-1]) for ld in stems]):
-            n += 1
-        suffix = stems[0][::-1][: n - 1][::-1]
-        #
-        maps = {}
-        shape = None
-        for ix, linedir in enumerate(linedirs):
-            cnd = next(linedir.rglob("*.cnd"))
-            ok = False
-            with open(cnd, "r") as f:
-                for ln in f.readlines():
-                    if ln.startswith("$XM_AP_SA_PIXELS%"):
-                        _, cols, rows = map(int, ln[17:].split())
-                        ok = True
-            assert ok, "No $XM_AP_SA_PIXELS% keyword in metafile"
-            if shape is None:
-                shape = (rows, cols)
-            else:
-                assert shape == (rows, cols), "All linedata must have same shape"
-            csv = next(linedir.rglob("*.csv"))
-            els = re.findall(f"{prefix}(.*?){suffix}", linedir.stem)
-            assert len(els) == 1, "Element name parsing error"
-            maps[els[0]] = np.loadtxt(csv).reshape((rows, cols)).astype(int)
-            print(f"{ix+1}/{len(linedirs)} {els[0]} parsed...")
-        if "name" not in kwargs:
-            kwargs["name"] = src.stem
-        return cls(maps, shape, **kwargs)
-
-    @classmethod
-    def from_upsg_eds(cls, src, **kwargs):
-        """Reads map data from EDS export.
-
-        Note: Use this method to import data where individual maps are exported
-        as separate files
-
-        """
-        src = Path(src)
-        assert src.is_dir(), "Source path must be dir"
-        cnds = [p for p in src.iterdir() if p.suffix == ".cnd"]
-        maps = {}
-        shape = None
-        for ix, cnd in enumerate(cnds):
-            meta = {}
-            with open(cnd, "r") as f:
-                for ln in f.readlines():
-                    if ln.startswith("$"):
-                        tags = ln.strip().split()
-                        key = tags[0].split("$")[1].split("%")[0]
-                        if len(tags) > 1:
-                            meta[key] = tags[1:]
-                        else:
-                            meta[key] = None
-            if "XM_AP_SA_PIXELS" in meta:
-                cols, rows = map(int, meta["XM_AP_SA_PIXELS"])
-            else:
-                raise ValueError(f"No $XM_AP_SA_PIXELS in {cnd}")
-            if "XM_ELEM_NAME" in meta:
-                if meta["XM_ELEM_NAME"] is not None:
-                    element = meta["XM_ELEM_NAME"][0]
-                else:
-                    if "XM_ELEM_IMS_SIGNAL_TYPE" in meta:
-                        element = meta["XM_ELEM_IMS_SIGNAL_TYPE"][0]
-                    else:
-                        raise ValueError(f"No $XM_ELEM_IMS_SIGNAL_TYPE in {cnd}")
-            else:
-                raise ValueError(f"No $XM_ELEM_NAME in {cnd}")
-            if shape is None:
-                shape = (rows, cols)
-            else:
-                if shape != (rows, cols):
-                    raise ValueError("All linedata must have same shape")
-            csv = cnd.with_suffix(".csv")
-            if not csv.exists():
-                raise ValueError(f"No {csv.stem}.csv file found for {cnd.stem}.cnd")
-            values = np.loadtxt(csv, delimiter=",")
-            if values.ndim == 1:
-                values = values.reshape((rows, cols)).astype(int)
-            else:
-                if shape == values.shape:
-                    values = values.astype(int)
-                else:
-                    raise ValueError("Matrix shape do not correspond metafile info")
-            maps[element] = values
-            print(f"{ix + 1}/{len(cnds)} {element} parsed...")
-        if "name" not in kwargs:
-            kwargs["name"] = src.stem
-        return cls(maps, shape, **kwargs)
-
-    @classmethod
-    def from_upsg_eds_merged(cls, src, **kwargs):
-        """Reads map data from EDS export.
-
-        Note: Use this method to import data where individual maps are exported
-        as merged file
-
-        """
-        src = Path(src)
-        assert src.is_dir(), "Source path must be dir"
-        csvs = [p for p in src.iterdir() if p.suffix == ".csv"]
-        assert len(csvs) == 1, "There must be only one csv file in stacked export"
-        df = pd.read_csv(csvs[0])
-        df.columns = df.columns.str.strip()
-        cnds = [p for p in src.iterdir() if p.suffix == ".cnd"]
-        maps = {}
-        shape = None
-        for ix, cnd in enumerate(cnds):
-            meta = {}
-            with open(cnd, "r") as f:
-                for ln in f.readlines():
-                    if ln.startswith("$"):
-                        tags = ln.strip().split()
-                        key = tags[0].split("$")[1].split("%")[0]
-                        if len(tags) > 1:
-                            meta[key] = tags[1:]
-                        else:
-                            meta[key] = None
-            if "XM_AP_SA_PIXELS" in meta:
-                cols, rows = map(int, meta["XM_AP_SA_PIXELS"])
-            else:
-                raise ValueError(f"No $XM_AP_SA_PIXELS in {cnd}")
-            if "XM_ELEM_NAME" in meta:
-                if meta["XM_ELEM_NAME"] is not None:
-                    element = meta["XM_ELEM_NAME"][0]
-                else:
-                    if "XM_ELEM_IMS_SIGNAL_TYPE" in meta:
-                        element = meta["XM_ELEM_IMS_SIGNAL_TYPE"][0]
-                    else:
-                        raise ValueError(f"No $XM_ELEM_IMS_SIGNAL_TYPE in {cnd}")
-            else:
-                raise ValueError(f"No $XM_ELEM_NAME in {cnd}")
-            if shape is None:
-                shape = (rows, cols)
-            else:
-                if shape != (rows, cols):
-                    raise ValueError("All linedata must have same shape")
-            maps[element] = df[element].values.reshape((rows, cols)).astype(int)
-            print(f"{ix + 1}/{len(cnds)} {element} parsed...")
-        if "name" not in kwargs:
-            kwargs["name"] = src.stem
-        return cls(maps, shape, **kwargs)
 
 
 class MapLegend:
