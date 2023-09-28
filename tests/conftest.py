@@ -1,7 +1,7 @@
 import pytest
-from empatools import Oxides
+from epmatools import Oxides
 
 
 @pytest.fixture
 def data():
-    return Oxides.from_examples('minerals').set_index("Comment")
+    return Oxides.from_examples("minerals").set_index("Comment")

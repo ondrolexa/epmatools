@@ -215,7 +215,7 @@ class MapStore:
             Oxides: datatable
 
         """
-        resources = importlib.resources.files("empatools") / "data"
+        resources = importlib.resources.files("epmatools") / "data"
         datapath = resources / "maps"
         if example is None:
             print(f"Available examples: {[f.stem for f in datapath.glob('*.h5')]}")

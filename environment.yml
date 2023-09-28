@@ -1,4 +1,4 @@
-name: empatools
+name: epmatools
 
 dependencies:
   - python=3.11
@@ -19,18 +19,19 @@ dependencies:
   - jupyterlab
   - jupyterlab-spellchecker
   - jupyterlab_code_formatter
+  - pytest
   - isort
   - black
   - ipykernel
   - pip
   - pip:
-    - -e . # install the local empatools package
+    - -e . # install the local epmatools package
 
 # mamba env create -f environment.yml
-# python -m ipykernel install --user --name empatools
+# python -m ipykernel install --user --name epmatools
 
-# mamba activate empatools
+# mamba activate epmatools
 
-# mamba deactivate empatools
-# mamba remove -n pyrolite
-# jupyter kernelspec uninstall empatools
+# mamba deactivate
+# mamba remove -n epmatools --all
+# jupyter kernelspec uninstall epmatools

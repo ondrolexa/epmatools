@@ -676,7 +676,7 @@ class Oxides(Compo):
             Oxides: datatable
 
         """
-        resources = importlib.resources.files("empatools") / "data"
+        resources = importlib.resources.files("epmatools") / "data"
         datapath = resources / "oxides"
         if example is None:
             print(f"Available examples: {[f.stem for f in datapath.glob('*.csv')]}")
@@ -787,7 +787,7 @@ class APFU(Ions):
 
     Args:
         df (pandas.DataFrame): plunge direction of linear feature in degrees
-        mineral (Mineral): mineral used for formula calculations. See `empatools.mindb`
+        mineral (Mineral): mineral used for formula calculations. See `epmatools.mindb`
         units (str, optional): units of datatable. Default is `"wt%"`
         name (str, optional): name of datatable. Default is `"Compo"`
         desc (str, optional): description of datatable. Default is `"Original data"`

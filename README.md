@@ -1,22 +1,22 @@
-# Welcome to EMPAtools
+# Welcome to EPMAtools
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation Status](https://readthedocs.org/projects/empatools/badge/)](https://empatools.readthedocs.io/)
-[![codecov](https://codecov.io/gh/ondrolexa/empatools/graph/badge.svg?token=KTY1CYPJSF)](https://codecov.io/gh/ondrolexa/empatools)
+[![Documentation Status](https://readthedocs.org/projects/epmatools/badge/)](https://epmatools.readthedocs.io/)
+[![codecov](https://codecov.io/gh/ondrolexa/epmatools/graph/badge.svg?token=KTY1CYPJSF)](https://codecov.io/gh/ondrolexa/epmatools)
 
 Python module to manipulate EMPA analyses
 
 ## Installation
 
-The Python package `empatools` can be installed from PyPI:
+The Python package `epmatools` can be installed from PyPI:
 
 ```
-python -m pip install empatools
+python -m pip install epmatools
 ```
 
 ## Development installation
 
-If you want to contribute to the development of `empatools`, we recommend
+If you want to contribute to the development of `epmatools`, we recommend
 the following editable installation from this repository:
 
 ```

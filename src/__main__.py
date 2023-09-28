@@ -3,7 +3,7 @@ import click
 
 @click.command()
 def main():
-    click.echo("This is empatools's command line interface.")
+    click.echo("This is epmatools's command line interface.")
 
 
 if __name__ == "__main__":

@@ -10,9 +10,9 @@ build-backend = "setuptools.build_meta"
 
 # This section provides general project metadata that is used across
 # a variety of build tools. Notably, the version specified here is the
-# single source of truth for empatools's version
+# single source of truth for epmatools's version
 [project]
-name = "empatools"
+name = "epmatools"
 description = "Tools to manipulate EMPA analyses"
 readme = "README.md"
 maintainers = [
@@ -58,15 +58,15 @@ docs = [
 
 # Command line scripts installed as part of the installation
 [project.scripts]
-empatools = "empatools.__main__:main"
+epmatools = "epmatools.__main__:main"
 
 [tool.setuptools]
 packages = [
-    "empatools",
+    "epmatools",
 ]
 
 [tool.setuptools.package-dir]
-empatools = "src"
+epmatools = "src"
 
 # Configure setuptools_scm, which extracts the version number from
 # the version control system. For more information see its documentation:

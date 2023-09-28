@@ -7,44 +7,44 @@ User API
     The common classes ``Oxides``, ``Ions`` and ``APFU`` could be imported
     directly from main namespace, e.g.:
 
-        >>> from empatools import Oxides
+        >>> from epmatools import Oxides
 
     The modules ``minerals`` and ``plotting`` are available in main namespace as
     ``mindb`` and ``minplot`` for convenience.
 
     For interactive use you can import all above using:
 
-        >>> from empatools import *
+        >>> from epmatools import *
 
-EMPAtools provides following modules:
+EPMAtools provides following modules:
 
-empatools.datatables
+epmatools.datatables
 --------------------
 
-.. automodule:: empatools.datatables
+.. automodule:: epmatools.datatables
     :members:
     :inherited-members:
 
-empatools.minerals
+epmatools.minerals
 ------------------
 
-.. automodule:: empatools.minerals
+.. automodule:: epmatools.minerals
     :members:
     :inherited-members:
 
-empatools.plotting
+epmatools.plotting
 ------------------
 
-.. automodule:: empatools.plotting
+.. automodule:: epmatools.plotting
     :members:
 
 To work with EDS maps you can use ``maps`` module. The class ``MapStore`` could be used
 for H5 storage of your maps, allowing quick access of yout data. Individual dataset are
 manipulated using ``Mapset`` class:
 
-empatools.maps
+epmatools.maps
 --------------
 
-.. automodule:: empatools.maps
+.. automodule:: epmatools.maps
     :members:
     :inherited-members:

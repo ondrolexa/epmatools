@@ -1,5 +1,5 @@
 import pytest
-from empatools import mindb
+from epmatools import mindb
 
 
 def test_molprop(data):

@@ -1,4 +1,4 @@
-EMPAtools
+EPMAtools
 =========
 
 .. toctree::
