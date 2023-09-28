@@ -655,16 +655,6 @@ class Oxides(Compo):
         return cls(df, index_col=index_col)
 
     @classmethod
-    def from_upsg_empa(cls, filename, index_col="Comment", **kwargs):
-        if "skiprows" not in kwargs:
-            kwargs["skiprows"] = 3
-        if "skipfooter" not in kwargs:
-            kwargs["skipfooter"] = 6
-        kwargs["index_col"] = False
-        df = pd.read_excel(filename, **kwargs)
-        return cls(df, index_col=index_col)
-
-    @classmethod
     def from_examples(cls, example=None):
         """Get example datatable
 

@@ -4,7 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/epmatools/badge/)](https://epmatools.readthedocs.io/)
 [![codecov](https://codecov.io/gh/ondrolexa/epmatools/graph/badge.svg?token=KTY1CYPJSF)](https://codecov.io/gh/ondrolexa/epmatools)
 
-Python module to manipulate EMPA analyses
+Python module to manipulate EPMA analyses
 
 ## Installation
 

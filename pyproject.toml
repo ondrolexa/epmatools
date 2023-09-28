@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 # single source of truth for epmatools's version
 [project]
 name = "epmatools"
-description = "Tools to manipulate EMPA analyses"
+description = "Tools to manipulate EPMA analyses"
 readme = "README.md"
 maintainers = [
     { name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" },
