@@ -556,7 +556,7 @@ class Oxides(Compo):
         Note:
             All P2O5 is assumed to be apatite based and is removed from composition
 
-                `CaO mol% = CaO mol% - 3.33 * P2O5 mol%`
+                `CaO mol% = CaO mol% - (10 / 3) * P2O5 mol%`
 
         Returns:
             Oxides: apatite corrected datatable
@@ -565,7 +565,7 @@ class Oxides(Compo):
         assert self.units == "wt%", "Oxides must be weight percents"
         if ("P2O5" in self.names) and ("CaO" in self.names):
             df = self.molprop().normalize(to=1).df
-            df["CaO"] = (df["CaO"] - 3.33 * df["P2O5"]).clip(lower=0)
+            df["CaO"] = (df["CaO"] - (10 / 3) * df["P2O5"]).clip(lower=0)
             df = df.drop(columns="P2O5")
             mws = self.props["mass"].drop(labels="P2O5")
             df = df.mul(mws, axis=1)
