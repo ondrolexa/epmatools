@@ -257,7 +257,7 @@ class Oxides(Compo):
         """Normalize the values
 
         Args:
-            to (it or float): desired sum. Default 100
+            to (int or float): desired sum. Default 100
 
         Returns:
             Oxides: normalized datatable
@@ -614,10 +614,10 @@ class Oxides(Compo):
             The CaO is recalculate using apatite correction based on P205 if available.
 
         Args:
-            H2O (float): mol% of water. When -1 the amount is calculated
-                to give sum 100%. Default -1.
-            oxygen (float): value to calculate ferric iron. moles FeO = FeOtot - 2O
-                and moles Fe2O3 = O. Default 0.01
+            H2O (float): wt% of water. When -1 the amount is calculated as 100 - Total
+                Default -1.
+            oxygen (float): value to calculate moles of ferric iron.
+                Moles FeO = FeOtot - 2O and moles Fe2O3 = O. Default 0.01
             system (str): axfile to be used. One of 'MnNCKFMASHTO', 'NCKFMASHTO',
                 'KFMASH', 'NCKFMASHTOCr', 'NCKFMASTOCr'. Default 'MnNCKFMASHTO'
 

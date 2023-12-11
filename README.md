@@ -34,10 +34,10 @@ and install `epmatools` package using pip:
 # pip install .
 ```
 
-## Development installation
+### Development installation
 
 If you want to contribute to the development of `epmatools`, we recommend
-the following editable installation from this repository:
+the editable installation from this repository:
 
 ```
 python -m pip install --editable .[tests]
@@ -48,6 +48,10 @@ Having done so, the test suite can be run using `pytest`:
 ```
 python -m pytest
 ```
+
+## Usage
+
+Check example in the following [jupyter notebook](https://nbviewer.org/github/ondrolexa/epmatools/blob/main/notebooks/demo.ipynb)
 
 ## Acknowledgments
 
