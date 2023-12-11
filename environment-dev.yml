@@ -1,7 +1,7 @@
 name: epmatools
 
 dependencies:
-  - python>=3.9
+  - python=3.11
   # pandas and scientific python
   - click
   - numpy
@@ -14,11 +14,24 @@ dependencies:
   - xlrd
   - openpyxl
   - periodictable
+  # Tools
+  - jupyter
   - jupyterlab
+  - jupyterlab-spellchecker
+  - jupyterlab_code_formatter
+  - pytest
+  - isort
+  - black
+  - ipykernel
+  - pip
+  - pip:
+    - -e . # install the local epmatools package
 
 # mamba env create -f environment.yml
+# python -m ipykernel install --user --name epmatools
+
 # mamba activate epmatools
-# pip install .
 
 # mamba deactivate
 # mamba remove -n epmatools --all
+# jupyter kernelspec uninstall epmatools

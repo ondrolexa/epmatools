@@ -607,6 +607,52 @@ class Oxides(Compo):
             df = df.T
         return df
 
+    def TCbulk(self, H2O=-1, oxygen=0.01, system='MnNCKFMASHTO'):
+        """Print oxides formatted as THERMOCALC bulk script
+
+        Note:
+            The CaO is recalculate using apatite correction based on P205 if available.
+
+        Args:
+            H2O (float): mol% of water. When -1 the amount is calculated
+                to give sum 100%. Default -1.
+            oxygen (float): value to calculate ferric iron. moles FeO = FeOtot - 2O
+                and moles Fe2O3 = O. Default 0.01
+            system (str): axfile to be used. One of 'MnNCKFMASHTO', 'NCKFMASHTO',
+                'KFMASH', 'NCKFMASHTOCr', 'NCKFMASTOCr'. Default 'MnNCKFMASHTO'
+
+        """
+        assert self.units == "wt%", "Oxides must be weight percents"
+        if system == 'MnNCKFMASHTO':
+            bulk = ['H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'MnO', 'O']
+        elif system =='NCKFMASHTO':
+            bulk = ['H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'O']
+        elif system == 'KFMASH':
+            bulk = ['H2O', 'SiO2', 'Al2O3', 'MgO', 'FeO', 'K2O']
+        elif system == 'NCKFMASHTOCr':
+            bulk = ['H2O', 'SiO2', 'Al2O3', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'O', 'Cr2O3']
+        elif system == 'NCKFMASTOCr':
+            bulk = ['SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'TiO2', 'O', 'Cr2O3']
+        else:
+            raise TypeError(f"{system} not implemented")
+        
+        df = self.convert_Fe().apatite_correction().df
+        # Water
+        if 'H2O' in bulk:
+            if H2O == -1:
+                H2O = 100 - df.sum(axis=1)
+                H2O[H2O < 0] = 0
+
+            df['H2O'] = H2O
+        if 'O' in bulk:
+            df['O'] = oxygen
+        df = df[bulk]
+        df = Oxides(df).molprop().normalize()
+
+        print('bulk' + ''.join([f'{lbl:>7}' for lbl in bulk]))
+        for ix, row in df._data.iterrows():
+            print('bulk' + ''.join([f' {v:6.3f}' for v in row.values]) + f'  % {ix}')
+
     @classmethod
     def from_clipboard(cls, index_col=None, vertical=False):
         """Parse datatable from clipboard.

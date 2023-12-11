@@ -14,6 +14,26 @@ The Python package `epmatools` can be installed from PyPI:
 python -m pip install epmatools
 ```
 
+### Installation of master version using conda/mamba
+
+You can also use the provided conda/mamba environment file to install it. Download the package and unzip. Open terminal in unpacked folder and create environment:
+
+```
+conda env create -f environment.yml
+```
+
+then activate newly created environment:
+
+```
+mamba activate epmatools
+```
+
+and install `epmatools` package using pip:
+
+```
+# pip install .
+```
+
 ## Development installation
 
 If you want to contribute to the development of `epmatools`, we recommend
