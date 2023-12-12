@@ -50,14 +50,17 @@ class Site:
                 else:
                     self.atoms[atom] = free
 
-    def get(self, atom):
+    def get(self, atom, fraction=False):
         """Get number of given atom on site
 
         Args:
             atom (str): atom name
 
         """
-        return self.atoms.get(atom, 0)
+        if fraction:
+            return self.atoms.get(atom, 0) / self.ncat
+        else:
+            return self.atoms.get(atom, 0)
 
     @property
     def free(self):
@@ -101,6 +104,17 @@ class StrucForm:
 
         """
         return sum([s.get(atom) for s in self.sites])
+
+    def site(self, name):
+        """Get site by name
+
+        Args:
+            name (str): site name
+
+        """
+        sites = [s for s in self.sites if s.name == name]
+        if sites:
+            return sites[0]
 
     @property
     def apfu(self):

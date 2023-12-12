@@ -118,11 +118,11 @@ class Compo:
         """Select subset of data from datatable
 
         Args:
-            s (str or int): When string, returns all data which contain string in
-                index. When numeric returns single record.
+            s (str or int): if string, returns all data which contain string a
+            in index, when numeric returns single record.
 
         Returns:
-            Oxides: slected data as datatable
+            Selected data as datatable
         """
         index = self._data.index
         if is_numeric_dtype(index):
@@ -131,6 +131,25 @@ class Compo:
             ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
         return type(self)(
             self._data[ix].copy(),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def select(self, start=None, end=None):
+        """Select subset of data based on index
+
+        Args:
+            start (label): When string, returns all data which contain string in
+                index. When numeric returns single record.
+            end (label): When string, returns all data which contain string in
+                index. When numeric returns single record.
+
+        Returns:
+            Selected data as datatable
+        """
+        return type(self)(
+            self._data.loc[start:end].copy(),
             units=self.units,
             name=self.name,
             desc=self.desc,
