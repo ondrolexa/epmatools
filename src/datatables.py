@@ -244,6 +244,7 @@ class Oxides(Compo):
         super().__init__(df, **kwargs)
         self.parse_columns()
         self.units = kwargs.get("units", "wt%")
+        self.decimals = kwargs.get("decimals", 3)
 
     def parse_columns(self):
         # parse columns
@@ -268,7 +269,7 @@ class Oxides(Compo):
         return "\n".join(
             [
                 f"Oxides: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df}",
+                f"{self.df.round(decimals=self.decimals)}",
             ]
         )
 
@@ -277,7 +278,7 @@ class Oxides(Compo):
             self.df.style.set_caption(
                 f"Oxides: {self.name} [{self.units}] - {self.desc}"
             )
-            .format(precision=4)
+            .format(precision=self.decimals)
             .to_html()
         )
 
@@ -823,6 +824,7 @@ class Ions(Compo):
         super().__init__(df, **kwargs)
         self.parse_columns()
         self.units = kwargs.get("units", "atoms")
+        self.decimals = kwargs.get("decimals", 4)
 
     def parse_columns(self):
         self._props = []
@@ -854,14 +856,14 @@ class Ions(Compo):
         return "\n".join(
             [
                 f"Ions: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df}",
+                f"{self.df.round(decimals=self.decimals)}",
             ]
         )
 
     def _repr_html_(self):
         return (
             self.df.style.set_caption(f"Ions: {self.name} [{self.units}] - {self.desc}")
-            .format(precision=4)
+            .format(precision=self.decimals)
             .to_html()
         )
 
@@ -914,13 +916,14 @@ class APFU(Ions):
     def __init__(self, df, mineral, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
+        self.decimals = kwargs.get("decimals", 3)
         self.mineral = mineral
 
     def __repr__(self):
         return "\n".join(
             [
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df}",
+                f"{self.df.round(decimals=self.decimals)}",
             ]
         )
 
@@ -929,7 +932,7 @@ class APFU(Ions):
             self.df.style.set_caption(
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}"
             )
-            .format(precision=4)
+            .format(precision=self.decimals)
             .to_html()
         )
 
