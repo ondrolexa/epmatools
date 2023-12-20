@@ -114,12 +114,13 @@ class Compo:
             desc=self.desc,
         )
 
-    def get_sample(self, s):
-        """Select subset of data from datatable
+    def search(self, s):
+        """Search subset of data from datatable based on index
 
         Args:
-            s (str or int): if string, returns all data which contain string a
-            in index, when numeric returns single record.
+            s (str or int): search for s in index. Ff string, returns all data which
+            contain string s in index. Numeric s could be used for numeric index to
+            return single sample.
 
         Returns:
             Selected data as datatable
@@ -137,7 +138,7 @@ class Compo:
         )
 
     def select(self, start=None, end=None):
-        """Select subset of data based on index
+        """Select subset of data from datatable based on index
 
         Args:
             start (label): When string, returns all data which contain string in
@@ -626,7 +627,7 @@ class Oxides(Compo):
             df = df.T
         return df
 
-    def TCbulk(self, H2O=-1, oxygen=0.01, system='MnNCKFMASHTO'):
+    def TCbulk(self, H2O=-1, oxygen=0.01, system="MnNCKFMASHTO"):
         """Print oxides formatted as THERMOCALC bulk script
 
         Note:
@@ -642,35 +643,69 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        if system == 'MnNCKFMASHTO':
-            bulk = ['H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'MnO', 'O']
-        elif system =='NCKFMASHTO':
-            bulk = ['H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'O']
-        elif system == 'KFMASH':
-            bulk = ['H2O', 'SiO2', 'Al2O3', 'MgO', 'FeO', 'K2O']
-        elif system == 'NCKFMASHTOCr':
-            bulk = ['H2O', 'SiO2', 'Al2O3', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'O', 'Cr2O3']
-        elif system == 'NCKFMASTOCr':
-            bulk = ['SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'TiO2', 'O', 'Cr2O3']
+        if system == "MnNCKFMASHTO":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "MnO",
+                "O",
+            ]
+        elif system == "NCKFMASHTO":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+            ]
+        elif system == "KFMASH":
+            bulk = ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"]
+        elif system == "NCKFMASHTOCr":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "Cr2O3",
+            ]
+        elif system == "NCKFMASTOCr":
+            bulk = ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "TiO2", "O", "Cr2O3"]
         else:
             raise TypeError(f"{system} not implemented")
-        
+
         df = self.convert_Fe().apatite_correction().df
         # Water
-        if 'H2O' in bulk:
+        if "H2O" in bulk:
             if H2O == -1:
                 H2O = 100 - df.sum(axis=1)
                 H2O[H2O < 0] = 0
 
-            df['H2O'] = H2O
-        if 'O' in bulk:
-            df['O'] = oxygen
+            df["H2O"] = H2O
+        if "O" in bulk:
+            df["O"] = oxygen
         df = df[bulk]
         df = Oxides(df).molprop().normalize()
 
-        print('bulk' + ''.join([f'{lbl:>7}' for lbl in bulk]))
+        print("bulk" + "".join([f"{lbl:>7}" for lbl in bulk]))
         for ix, row in df._data.iterrows():
-            print('bulk' + ''.join([f' {v:6.3f}' for v in row.values]) + f'  % {ix}')
+            print("bulk" + "".join([f" {v:6.3f}" for v in row.values]) + f"  % {ix}")
 
     @classmethod
     def from_clipboard(cls, index_col=None, vertical=False):
