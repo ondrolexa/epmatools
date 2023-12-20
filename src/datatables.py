@@ -65,6 +65,15 @@ class Compo:
         """Return number of data in datatable"""
         return self._data.shape[0]
 
+    def __getitem__(self, index):
+        if isinstance(index, str):
+            if index in self._valid:
+                return self.df[index]
+            else:
+                raise ValueError(f"Index must be on of {self._valid}")
+        else:
+            raise TypeError("Only string could be used as index.")
+
     @property
     def df(self):
         return self._data[self._valid].copy()
