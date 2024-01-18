@@ -710,12 +710,91 @@ class Oxides(Compo):
             df["H2O"] = H2O
         if "O" in bulk:
             df["O"] = oxygen
-        df = df[bulk]
-        df = Oxides(df).molprop().normalize()
+        df = Oxides(df[bulk]).molprop().normalize()
 
         print("bulk" + "".join([f"{lbl:>7}" for lbl in bulk]))
         for ix, row in df._data.iterrows():
             print("bulk" + "".join([f" {v:6.3f}" for v in row.values]) + f"  % {ix}")
+
+    def Perplexbulk(self, H2O=-1, oxygen=0.01, system="MnNCKFMASHTO"):
+        """Print oxides formatted as PerpleX thermodynamic component list
+
+        Note:
+            The CaO is recalculate using apatite correction based on P205 if available.
+
+        Args:
+            H2O (float): wt% of water. When -1 the amount is calculated as 100 - Total
+                Default -1.
+            oxygen (float): value to calculate moles of ferric iron.
+                Moles FeO = FeOtot - 2O and moles Fe2O3 = O. Default 0.01
+            system (str): axfile to be used. One of 'MnNCKFMASHTO', 'NCKFMASHTO',
+                'KFMASH', 'NCKFMASHTOCr', 'NCKFMASTOCr'. Default 'MnNCKFMASHTO'
+
+        """
+        assert self.units == "wt%", "Oxides must be weight percents"
+        if system == "MnNCKFMASHTO":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "MnO",
+                "O2",
+            ]
+        elif system == "NCKFMASHTO":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O2",
+            ]
+        elif system == "KFMASH":
+            bulk = ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"]
+        elif system == "NCKFMASHTOCr":
+            bulk = [
+                "H2O",
+                "SiO2",
+                "Al2O3",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O2",
+                "Cr2O3",
+            ]
+        elif system == "NCKFMASTOCr":
+            bulk = ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "TiO2", "O2", "Cr2O3"]
+        else:
+            raise TypeError(f"{system} not implemented")
+
+        df = self.convert_Fe().apatite_correction().df
+        # Water
+        if "H2O" in bulk:
+            if H2O == -1:
+                H2O = 100 - df.sum(axis=1)
+                H2O[H2O < 0] = 0
+
+            df["H2O"] = H2O
+        if "O2" in bulk:
+            df["O2"] = oxygen
+        df = Oxides(df[bulk]).molprop().normalize()
+
+        print("begin thermodynamic component list")
+        for ox, val in df._data.iloc[0].items():
+            print(f"{ox:6s}1 {val:8.5f}      0.00000      0.00000     molar amount")
+        print("end thermodynamic component list")
 
     @classmethod
     def from_clipboard(cls, index_col=None, vertical=False):
