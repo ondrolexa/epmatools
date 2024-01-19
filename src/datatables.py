@@ -50,8 +50,9 @@ class Compo:
         assert isinstance(
             df, pd.DataFrame
         ), "Argument must be pandas.DataFrame or pd Series"
-        # clean column names
-        df = df.rename(columns=lambda x: x.strip())
+        if kwargs.get("strip_column_names", True):
+            # clean column names
+            df = df.rename(columns=lambda x: x.strip())
         # parse common kwargs
         self.name = kwargs.get("name", "Compo")
         self.desc = kwargs.get("desc", "Original data")
@@ -59,6 +60,9 @@ class Compo:
         index_col = kwargs.get("index_col", None)
         if index_col in df:
             df = df.reset_index(drop=True).set_index(index_col)
+        if kwargs.get("strip_index", True):
+            if pd.api.types.is_string_dtype(df.index.dtype):
+                df.index = [v.strip() for v in df.index]
         self._data = df.copy()
 
     def __len__(self):
@@ -118,6 +122,24 @@ class Compo:
         """Reset index to default pandas.RangeIndex"""
         return type(self)(
             self._data.reset_index(),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def head(self, N=10):
+        """Return first N rows"""
+        return type(self)(
+            self._data.iloc[:N],
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def tail(self, N=10):
+        """Return last N rows"""
+        return type(self)(
+            self._data.iloc[-N:],
             units=self.units,
             name=self.name,
             desc=self.desc,
@@ -1015,9 +1037,49 @@ class APFU(Ions):
             .to_html()
         )
 
-    def get_sample(self, s):
-        res = super().get_sample(s)
-        res.mineral = self.mineral
+    def search(self, s):
+        """Search subset of data from datatable based on index
+
+        Args:
+            s (str or int): search for s in index. Ff string, returns all data which
+            contain string s in index. Numeric s could be used for numeric index to
+            return single sample.
+
+        Returns:
+            Selected data as datatable
+        """
+        index = self._data.index
+        if is_numeric_dtype(index):
+            ix = index == s
+        else:
+            ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
+        return type(self)(
+            self._data[ix].copy(),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+            mineral=self.mineral,
+        )
+
+    def select(self, start=None, end=None):
+        """Select subset of data from datatable based on index
+
+        Args:
+            start (label): When string, returns all data which contain string in
+                index. When numeric returns single record.
+            end (label): When string, returns all data which contain string in
+                index. When numeric returns single record.
+
+        Returns:
+            Selected data as datatable
+        """
+        return type(self)(
+            self._data.loc[start:end].copy(),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+            mineral=self.mineral,
+        )
 
     def endmembers(self, force=False):
         """Calculate endmembers proportions
