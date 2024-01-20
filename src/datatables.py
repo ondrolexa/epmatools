@@ -78,9 +78,33 @@ class Compo:
         else:
             raise TypeError("Only string could be used as index.")
 
+    def reversed(self):
+        """Return in reversed order"""
+        return type(self)(
+            self._data.reindex(index=self._data.index[::-1]),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def iterrows(self, what=None):
+        """Return row iterator yielding tuples (label, row)
+
+        Args:
+            what (str): Which columns are included. None for all, 'valid' for valid,
+                'elements' for elements and 'others' for others. Default None
+
+        """
+        if what is None:
+            return self._data.iterrows()
+        else:
+            return getattr(self, what).iterrows()
+
     @property
     def df(self):
         return self._data[self._valid].copy()
+
+    valid = df
 
     @property
     def others(self):
@@ -127,55 +151,78 @@ class Compo:
             desc=self.desc,
         )
 
-    def head(self, N=10):
-        """Return first N rows"""
-        return type(self)(
-            self._data.iloc[:N],
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
-
-    def tail(self, N=10):
-        """Return last N rows"""
-        return type(self)(
-            self._data.iloc[-N:],
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
-
-    def search(self, s):
-        """Search subset of data from datatable based on index
+    def head(self, n=5):
+        """Return first n rows
 
         Args:
-            s (str or int): search for s in index. Ff string, returns all data which
-            contain string s in index. Numeric s could be used for numeric index to
-            return single sample.
+            n (int): Number of rows. Default 5
+
+        """
+        return type(self)(
+            self._data.iloc[:n],
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def tail(self, n=5):
+        """Return last n rows
+
+        Args:
+            n (int): Number of rows. Default 5
+
+        """
+        return type(self)(
+            self._data.iloc[-n:],
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
+    def row(self, label, what=None):
+        """Return row as pandas Series
+
+        Args:
+            label (label): label from index
+            what (str): Which columns are included. None for all, 'valid' for valid,
+                'elements' for elements and 'others' for others. Default None
+
+        """
+        if what is None:
+            return self._data.loc[label].copy()
+        else:
+            return getattr(self, what).loc[label].copy()
+
+
+    def search(self, s):
+        """Search subset of data from datatable containing string s in index
+
+        Note: Works only with non-numeric index
+
+        Args:
+            s (str): Returns all data which contain string s in index.
 
         Returns:
             Selected data as datatable
         """
         index = self._data.index
-        if is_numeric_dtype(index):
-            ix = index == s
-        else:
+        if not is_numeric_dtype(index):
             ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
-        return type(self)(
-            self._data[ix].copy(),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+            return type(self)(
+                self._data.loc[ix].copy(),
+                units=self.units,
+                name=self.name,
+                desc=self.desc,
+            )
+        else:
+            print('Index is numeric.. Try to use .row method')
 
     def select(self, start=None, end=None):
         """Select subset of data from datatable based on index
 
         Args:
-            start (label): When string, returns all data which contain string in
-                index. When numeric returns single record.
-            end (label): When string, returns all data which contain string in
-                index. When numeric returns single record.
+            start (label): Start of the slice. Default None
+            end (label): End of the slice. Default None
 
         Returns:
             Selected data as datatable
