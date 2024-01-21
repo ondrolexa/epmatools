@@ -10,7 +10,11 @@ jobs:
   pypi-deploy:
     name: Deploying Python Package
     runs-on: ubuntu-latest
-
+    environment:
+      name: release
+      url: https://pypi.org/p/<your-pypi-project-name>
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
       with:
@@ -23,7 +27,5 @@ jobs:
     - name: Build SDist
       run: pipx run build --sdist
 
-    - uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    - uses: pypa/gh-action-pypi-publish@release/v1
+
