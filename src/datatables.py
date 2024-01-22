@@ -193,7 +193,6 @@ class Compo:
         else:
             return getattr(self, what).loc[label].copy()
 
-
     def search(self, s):
         """Search subset of data from datatable containing string s in index
 
@@ -215,7 +214,7 @@ class Compo:
                 desc=self.desc,
             )
         else:
-            print('Index is numeric.. Try to use .row method')
+            print("Index is numeric.. Try to use .row method")
 
     def select(self, start=None, end=None):
         """Select subset of data from datatable based on index
@@ -1082,6 +1081,16 @@ class APFU(Ions):
             )
             .format(precision=self.decimals)
             .to_html()
+        )
+
+    def reversed(self):
+        """Return in reversed order"""
+        return type(self)(
+            self._data.reindex(index=self._data.index[::-1]),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+            mineral=self.mineral,
         )
 
     def search(self, s):
