@@ -133,6 +133,7 @@ class Compo:
             key (str or list like): Either name of column (see ``Oxides.others``) or
                 collection of same length as datatable
         """
+        assert key in self._others, f"Column name must be one of {self._others}"
         return type(self)(
             self._data.reset_index(
                 drop=isinstance(self._data.index, pd.RangeIndex)
