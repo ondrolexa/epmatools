@@ -4,15 +4,20 @@ import numpy as np
 import pandas as pd
 
 
-def read_actlabs(src):
-    df = pd.read_excel(src, header=2)
+def read_actlabs(src. **kwargs):
+    if 'header' not in kwargs:
+        kwargs['header'] = 2
+    df = pd.read_excel(src, **kwargs)
     units = df.iloc[0]
     limits = df.iloc[1]
     method = df.iloc[2]
-    df = df.rename(columns={"Analyte Symbol": "Sample"})[3:].set_index("Sample").T
+    df = df.rename(columns={"Analyte Symbol": "Sample"})[3:].set_index("Sample")
     # replace detection limits
     for col in df:
-        df[col][df[col].str.contains("< ") is True] = 0
+        ix = df[col].astype(str).str.startswith("< ")
+        if any(ix):
+            df.loc[ix, col] = np.nan
+
     df = df.astype(float)
     return df, units, limits, method
 
