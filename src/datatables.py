@@ -194,10 +194,10 @@ class Compo:
         else:
             return getattr(self, what).loc[label].copy()
 
-    def search(self, s):
-        """Search subset of data from datatable containing string s in index
+    def search(self, s, on=None):
+        """Search subset of data from datatable containing string s in index or column
 
-        Note: Works only with non-numeric index
+        Note: Works only with non-numeric index or column
 
         Args:
             s (str): Returns all data which contain string s in index.
@@ -205,9 +205,16 @@ class Compo:
         Returns:
             Selected data as datatable
         """
-        index = self._data.index
-        if not is_numeric_dtype(index):
-            ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
+        assert isinstance(s, str), "Argument must be string"
+        if on is None:
+            col = self._data.index
+        else:
+            assert on in self._data, f"Column {on} not found"
+            col = self._data[on]
+        if not is_numeric_dtype(col):
+            ix = pd.Series([str(v) for v in col], index=self._data.index).str.contains(
+                s
+            )
             return type(self)(
                 self._data.loc[ix].copy(),
                 units=self.units,
@@ -215,7 +222,10 @@ class Compo:
                 desc=self.desc,
             )
         else:
-            print("Index is numeric.. Try to use .row method")
+            if on is None:
+                print("Index is numeric. Try to use .row method")
+            else:
+                print("Selected column is numeric. Try to use .row method")
 
     def select(self, start=None, end=None):
         """Select subset of data from datatable based on index
@@ -1094,29 +1104,53 @@ class APFU(Ions):
             mineral=self.mineral,
         )
 
-    def search(self, s):
-        """Search subset of data from datatable based on index
+    def row(self, label, what=None):
+        """Return row as pandas Series
 
         Args:
-            s (str or int): search for s in index. Ff string, returns all data which
-            contain string s in index. Numeric s could be used for numeric index to
-            return single sample.
+            label (label): label from index
+            what (str): Which columns are included. None for all, 'valid' for valid,
+                'elements' for elements and 'others' for others. Default None
+
+        """
+        if what is None:
+            return self._data.loc[label].copy()
+        else:
+            return getattr(self, what).loc[label].copy()
+
+    def search(self, s, on=None):
+        """Search subset of data from datatable containing string s in index or column
+
+        Note: Works only with non-numeric index or column
+
+        Args:
+            s (str): Returns all data which contain string s in index.
 
         Returns:
             Selected data as datatable
         """
-        index = self._data.index
-        if is_numeric_dtype(index):
-            ix = index == s
+        assert isinstance(s, str), "Argument must be string"
+        if on is None:
+            col = self._data.index
         else:
-            ix = pd.Series([str(v) for v in index], index=index).str.contains(s)
-        return type(self)(
-            self._data[ix].copy(),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-            mineral=self.mineral,
-        )
+            assert on in self._data, f"Column {on} not found"
+            col = self._data[on]
+        if not is_numeric_dtype(col):
+            ix = pd.Series(
+                [str(v) for v in index], index=self._data.index
+            ).str.contains(s)
+            return type(self)(
+                self._data.loc[ix].copy(),
+                units=self.units,
+                name=self.name,
+                desc=self.desc,
+                mineral=self.mineral,
+            )
+        else:
+            if on is None:
+                print("Index is numeric. Try to use .row method")
+            else:
+                print("Selected column is numeric. Try to use .row method")
 
     def select(self, start=None, end=None):
         """Select subset of data from datatable based on index
