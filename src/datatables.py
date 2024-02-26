@@ -126,6 +126,19 @@ class Compo:
             self.df.mean(axis=0), name=self.name, units=self.units, desc="Average"
         )
 
+    def drop(self, labels):
+        """Drop rows based on index
+
+        Args:
+            labels: single or list of indexes to be dropped
+        """
+        return type(self)(
+            self._data.drop(labels),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+        )
+
     def set_index(self, key):
         """Set index of datatable
 
@@ -1092,6 +1105,20 @@ class APFU(Ions):
             )
             .format(precision=self.decimals)
             .to_html()
+        )
+
+    def drop(self, labels):
+        """Drop rows based on index
+
+        Args:
+            labels: single or list of indexes to be dropped
+        """
+        return type(self)(
+            self._data.drop(labels),
+            units=self.units,
+            name=self.name,
+            desc=self.desc,
+            mineral=self.mineral,
         )
 
     def reversed(self):

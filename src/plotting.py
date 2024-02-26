@@ -9,7 +9,7 @@ def plot_grt_profile(em, **kwargs):
 
     Args:
         em (pandas.DataFrame): endmembers
-        use_index (bool): When True, xticks are derivaed from DataFrame index,
+        use_index (bool): When True, xticks are derived from DataFrame index,
             otherwise ticks are sequential. Default False
         twin (bool, optional): When ``True``, the plot has two independent y-axes
             for better scaling. Endmembers must be separated into two groups using
