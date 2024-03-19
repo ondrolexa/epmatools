@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -11,6 +12,7 @@ def plot_grt_profile(em, **kwargs):
         em (pandas.DataFrame): endmembers
         use_index (bool): When True, xticks are derived from DataFrame index,
             otherwise ticks are sequential. Default False
+        xticks_rotation (float, optional): Rotation of xtick labels. Default 0
         twin (bool, optional): When ``True``, the plot has two independent y-axes
             for better scaling. Endmembers must be separated into two groups using
             `data1` and `data2` args. When ``False`` both groups are plotted on same
@@ -23,6 +25,8 @@ def plot_grt_profile(em, **kwargs):
             ``None``. Default ``None``
         datalim2 (tuple, optional): y-axis limits for second axis or auto when
             ``None``. Default ``None``
+        omit (list, optional): index or list of indexes to be omitted from plot.
+            Default None
         percents (bool): When ``True`` y-axes scale is percents, otherwise fraction
         xlabel (str, optional): label of the x-axis. Default ``None``
         filename (str, optional): When not ``None``, the plot is saved to file,
@@ -49,6 +53,9 @@ def plot_grt_profile(em, **kwargs):
         xlabel = kwargs.get("xlabel", "position")
     fig, ax1 = plt.subplots()
     ax1.set_xlabel(xlabel)
+    # omit
+    if kwargs.get("omit", None) is not None:
+        em.loc[kwargs.get("omit")] = np.nan
     if kwargs.get("twin", True):
         ax1.set_ylabel(" ".join(data1) + unit)
         h1 = ax1.plot(xvals, em[data1], marker="o", ms=4)
@@ -85,6 +92,7 @@ def plot_grt_profile(em, **kwargs):
     # Find at most maxticks ticks on the x-axis at 'nice' locations
     xloc = plt.MaxNLocator(maxticks - 1)
     ax1.xaxis.set_major_locator(xloc)
+    ax1.tick_params(axis="x", labelrotation=kwargs.get("xticks_rotation", 0))
     fig.tight_layout()
     if filename is not None:
         fig.savefig(filename)

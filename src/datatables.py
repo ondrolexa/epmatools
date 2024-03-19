@@ -50,8 +50,8 @@ class Compo:
         assert isinstance(
             df, pd.DataFrame
         ), "Argument must be pandas.DataFrame or pd Series"
+        # clean column names
         if kwargs.get("strip_column_names", True):
-            # clean column names
             df = df.rename(columns=lambda x: x.strip())
         # parse common kwargs
         self.name = kwargs.get("name", "Compo")
@@ -335,6 +335,9 @@ class Oxides(Compo):
     def __init__(self, df, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
+        # drop rows with no data
+        self._data = self._data.dropna(how="all", subset=self._valid)
+        # finish
         self.units = kwargs.get("units", "wt%")
         self.decimals = kwargs.get("decimals", 3)
 
