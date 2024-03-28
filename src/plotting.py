@@ -1,5 +1,7 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import SpanSelector
 
 
 def plot_grt_profile(em, **kwargs):
@@ -34,6 +36,11 @@ def plot_grt_profile(em, **kwargs):
         maxticks (int): maximum number of ticks on x-axis. Default 20
 
     """
+    def onselect(xmin, xmax):
+        sel = em.loc[math.ceil(xmin):math.floor(xmax)]
+        if not sel.empty:
+            print(sel.describe())
+
     data1 = kwargs.get("data1", ["Prp", "Grs", "Sps"])
     data2 = kwargs.get("data2", ["Alm"])
     datalim1 = kwargs.get("datalim1", None)
@@ -97,5 +104,16 @@ def plot_grt_profile(em, **kwargs):
     if filename is not None:
         fig.savefig(filename)
     else:
+        # if index used, spanselector created
+        if kwargs.get("use_index", False):
+            span = SpanSelector(
+                ax1,
+                onselect,
+                "horizontal",
+                useblit=True,
+                props=dict(alpha=0.5, facecolor="tab:blue"),
+                interactive=True,
+                drag_from_anywhere=True
+            )
         plt.show()
     plt.close(fig)

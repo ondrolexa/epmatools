@@ -148,9 +148,7 @@ class Compo:
         """
         assert key in self._others, f"Column name must be one of {self._others}"
         return type(self)(
-            self._data.reset_index(
-                drop=isinstance(self._data.index, pd.RangeIndex)
-            ).set_index(key),
+            self._data.reset_index(drop=True).set_index(key, drop=False),
             units=self.units,
             name=self.name,
             desc=self.desc,
@@ -159,7 +157,7 @@ class Compo:
     def reset_index(self):
         """Reset index to default pandas.RangeIndex"""
         return type(self)(
-            self._data.reset_index(),
+            self._data.reset_index(drop=True),
             units=self.units,
             name=self.name,
             desc=self.desc,
