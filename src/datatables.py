@@ -75,6 +75,13 @@ class Compo:
                 return self.df[index]
             else:
                 raise ValueError(f"Index must be on of {self._valid}")
+        if isinstance(index, slice):
+            return type(self)(
+                self._data.loc[index],
+                units=self.units,
+                name=self.name,
+                desc=self.desc,
+            )
         else:
             raise TypeError("Only string could be used as index.")
 
@@ -819,7 +826,7 @@ class Oxides(Compo):
             H2O (float): wt% of water. When -1 the amount is calculated as 100 - Total
                 Default -1.
             oxygen (float): value to calculate moles of ferric iron.
-                Moles FeO = FeOtot - 2O and moles Fe2O3 = O. Default 0.01
+                Moles FeO = FeOtot - O and moles Fe2O3 = O. Default 0.01
             system (str): axfile to be used. One of 'MnNCKFMASHTO', 'NCKFMASHTO',
                 'KFMASH', 'NCKFMASHTOCr', 'NCKFMASTOCr'. Default 'MnNCKFMASHTO'
 
@@ -881,7 +888,7 @@ class Oxides(Compo):
 
             df["H2O"] = H2O
         if "O2" in bulk:
-            df["O2"] = oxygen
+            df["O2"] = 2 * oxygen
         df = Oxides(df[bulk]).molprop().normalize()
 
         print("begin thermodynamic component list")
