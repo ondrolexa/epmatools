@@ -12,8 +12,11 @@ def plot_grt_profile(em, **kwargs):
 
     Args:
         em (pandas.DataFrame): endmembers
-        use_index (bool): When True, xticks are derived from DataFrame index,
-            otherwise ticks are sequential. Default False
+        use_index (bool): When True, xticks are derived from DataFrame index and
+            SpanSelector is activated to describe selected range, otherwise ticks
+            are sequential. Default False
+        isopleths_syntax(bool): When True, SpanSelector shows min-max range in
+            psexplorer isopleths syntax. Default False
         xticks_rotation (float, optional): Rotation of xtick labels. Default 0
         twin (bool, optional): When ``True``, the plot has two independent y-axes
             for better scaling. Endmembers must be separated into two groups using
@@ -36,10 +39,24 @@ def plot_grt_profile(em, **kwargs):
         maxticks (int): maximum number of ticks on x-axis. Default 20
 
     """
+
     def onselect(xmin, xmax):
-        sel = em.loc[math.ceil(xmin):math.floor(xmax)]
+        sel = em.loc[math.ceil(xmin) : math.floor(xmax)]
         if not sel.empty:
-            print(sel.describe())
+            desc = sel.describe()
+            if kwargs.get("isopleths_syntax", False):
+                print(
+                    f"""
+pt.overlap_isopleths(
+    'g', 'xMgX', ({desc['Prp']['min']}, {desc['Prp']['max']}),
+    'g', 'xFeX', ({desc['Alm']['min']}, {desc['Alm']['max']}),
+    'g', 'xCaX', ({desc['Grs']['min']}, {desc['Grs']['max']}),
+    'g', 'xMnX', ({desc['Sps']['min']}, {desc['Sps']['max']}),
+)
+"""
+                )
+            else:
+                print(desc)
 
     data1 = kwargs.get("data1", ["Prp", "Grs", "Sps"])
     data2 = kwargs.get("data2", ["Alm"])
@@ -113,7 +130,7 @@ def plot_grt_profile(em, **kwargs):
                 useblit=True,
                 props=dict(alpha=0.5, facecolor="tab:blue"),
                 interactive=True,
-                drag_from_anywhere=True
+                drag_from_anywhere=True,
             )
         plt.show()
     plt.close(fig)
