@@ -13,10 +13,14 @@ def plot_grt_profile(em, **kwargs):
     Args:
         em (pandas.DataFrame): endmembers
         use_index (bool): When True, xticks are derived from DataFrame index and
-            SpanSelector is activated to describe selected range, otherwise ticks
+            SpanSelector is activated, otherwise ticks
             are sequential. Default False
-        isopleths_syntax(bool): When True, SpanSelector shows min-max range in
-            psexplorer isopleths syntax. Default False
+        overlap_isopleths(PTPS): When PTPS is passed, overlap_isopleths method is
+            invoked with SpanSelector min-max range for garnet composition.
+            Default None
+        search_composition(PTPS): When PTPS is passed, search_composition method is
+            invoked with SpanSelector mean values for garnet composition.
+            Default None
         xticks_rotation (float, optional): Rotation of xtick labels. Default 0
         twin (bool, optional): When ``True``, the plot has two independent y-axes
             for better scaling. Endmembers must be separated into two groups using
@@ -44,16 +48,36 @@ def plot_grt_profile(em, **kwargs):
         sel = em.loc[math.ceil(xmin) : math.floor(xmax)]
         if not sel.empty:
             desc = sel.describe()
-            if kwargs.get("isopleths_syntax", False):
-                print(
-                    f"""
-pt.overlap_isopleths(
-    'g', 'xMgX', ({desc['Prp']['min']}, {desc['Prp']['max']}),
-    'g', 'xFeX', ({desc['Alm']['min']}, {desc['Alm']['max']}),
-    'g', 'xCaX', ({desc['Grs']['min']}, {desc['Grs']['max']}),
-    'g', 'xMnX', ({desc['Sps']['min']}, {desc['Sps']['max']}),
-)
-"""
+            if kwargs.get("overlap_isopleths", False):
+                kwargs.get("overlap_isopleths").overlap_isopleths(
+                    "g",
+                    "xMgX",
+                    (desc["Prp"]["min"], desc["Prp"]["max"]),
+                    "g",
+                    "xFeX",
+                    (desc["Alm"]["min"], desc["Alm"]["max"]),
+                    "g",
+                    "xCaX",
+                    (desc["Grs"]["min"], desc["Grs"]["max"]),
+                    "g",
+                    "xMnX",
+                    (desc["Sps"]["min"], desc["Sps"]["max"]),
+                )
+            elif kwargs.get("search_composition", False):
+                kwargs.get("search_composition").search_composition(
+                    "g",
+                    "xMgX",
+                    desc["Prp"]["mean"],
+                    "g",
+                    "xFeX",
+                    desc["Alm"]["mean"],
+                    "g",
+                    "xCaX",
+                    desc["Grs"]["mean"],
+                    "g",
+                    "xMnX",
+                    desc["Sps"]["mean"],
+                    isopleths=True,
                 )
             else:
                 print(desc)
