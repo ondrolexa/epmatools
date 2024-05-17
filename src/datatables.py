@@ -246,7 +246,7 @@ class Compo:
                 print("Selected column is numeric. Try to use .row method")
 
     def select(self, loc):
-        """Select a group of rows and columns by label(s) or a boolean array
+        """Select rows by label(s) or a boolean array
 
         Args:
             loc: Single or list of labels, slice or boolean array.
@@ -1120,7 +1120,7 @@ class APFU(Ions):
         Args:
             labels: single or list of indexes to be dropped
         """
-        return type(self)(
+        return APFU(
             self._data.drop(labels),
             units=self.units,
             name=self.name,
@@ -1130,7 +1130,7 @@ class APFU(Ions):
 
     def reversed(self):
         """Return in reversed order"""
-        return type(self)(
+        return APFU(
             self._data.reindex(index=self._data.index[::-1]),
             units=self.units,
             name=self.name,
@@ -1170,10 +1170,10 @@ class APFU(Ions):
             assert on in self._data, f"Column {on} not found"
             col = self._data[on]
         if not is_numeric_dtype(col):
-            ix = pd.Series(
-                [str(v) for v in index], index=self._data.index
-            ).str.contains(s)
-            return type(self)(
+            ix = pd.Series([str(v) for v in col], index=self._data.index).str.contains(
+                s
+            )
+            return APFU(
                 self._data.loc[ix].copy(),
                 units=self.units,
                 name=self.name,
@@ -1186,20 +1186,17 @@ class APFU(Ions):
             else:
                 print("Selected column is numeric. Try to use .row method")
 
-    def select(self, start=None, end=None):
-        """Select subset of data from datatable based on index
+    def select(self, loc):
+        """Select rows by label(s) or a boolean array
 
         Args:
-            start (label): When string, returns all data which contain string in
-                index. When numeric returns single record.
-            end (label): When string, returns all data which contain string in
-                index. When numeric returns single record.
+            loc: Single or list of labels, slice or boolean array.
 
         Returns:
             Selected data as datatable
         """
-        return type(self)(
-            self._data.loc[start:end].copy(),
+        return APFU(
+            self._data.loc[loc].copy(),
             units=self.units,
             name=self.name,
             desc=self.desc,
@@ -1224,9 +1221,6 @@ class APFU(Ions):
     def mineral_apfu(self, force=False):
         """Calculate apfu from structural formula
 
-        Note:
-            Ions instance must be based on mineral
-
         Args:
             force (bool, optional): when True, remaining cations are added to last site
 
@@ -1235,7 +1229,7 @@ class APFU(Ions):
             res = []
             for ix, row in self.df.iterrows():
                 res.append(self.mineral.apfu(row, force=force))
-            return Ions(
+            return APFU(
                 pd.DataFrame(res, index=self._data.index),
                 mineral=self.mineral,
                 name=self.name,
@@ -1246,21 +1240,13 @@ class APFU(Ions):
 
     @property
     def reminder(self):
+        """Returns reminding cations"""
         return self.df - self.mineral_apfu().df
 
-    def check_formula(self, confidence=None):
-        """Return normalized error of calculated cations
-
-        Args:
-            confidence (float, optional): if not None, returns boolean vector with True,
-                where error is within confidence
-
-        """
-        err = abs(self.mineral.ncat - self.sum) / self.mineral.ncat
-        if confidence is not None:
-            return err <= confidence
-        else:
-            return err
+    @property
+    def error(self):
+        """Returns percentage error of calculated cations"""
+        return 100 * abs(self.mineral.ncat - self.sum) / self.sum
 
     def table(self, add_total=True, transpose=True):
         df = self.df
