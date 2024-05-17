@@ -245,18 +245,17 @@ class Compo:
             else:
                 print("Selected column is numeric. Try to use .row method")
 
-    def select(self, start=None, end=None):
-        """Select subset of data from datatable based on index
+    def select(self, loc):
+        """Select a group of rows and columns by label(s) or a boolean array
 
         Args:
-            start (label): Start of the slice. Default None
-            end (label): End of the slice. Default None
+            loc: Single or list of labels, slice or boolean array.
 
         Returns:
             Selected data as datatable
         """
         return type(self)(
-            self._data.loc[start:end].copy(),
+            self._data.loc[loc].copy(),
             units=self.units,
             name=self.name,
             desc=self.desc,

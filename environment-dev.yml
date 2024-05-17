@@ -1,7 +1,7 @@
 name: epmatools
 
 dependencies:
-  - python=3.11
+  - python>=3.9
   # pandas and scientific python
   - click
   - numpy
@@ -27,7 +27,7 @@ dependencies:
   - pip:
     - -e . # install the local epmatools package
 
-# mamba env create -f environment.yml
+# mamba env create -f environment-dev.yml
 # python -m ipykernel install --user --name epmatools
 
 # mamba activate epmatools
