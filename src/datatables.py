@@ -381,7 +381,6 @@ class Oxides(Compo):
             .to_html()
         )
 
-    @compo(desc="Normalized")
     def normalize(self, to=100):
         """Normalize the values
 
@@ -392,7 +391,12 @@ class Oxides(Compo):
             Oxides: normalized datatable
 
         """
-        return to * self.df.div(self.sum, axis=0)
+        return type(self)(
+            to * self.df.div(self.sum, axis=0),
+            units=self.units,
+            name=self.name,
+            desc=f"Normalized to {to}",
+        )
 
     @property
     def elements(self):
@@ -805,6 +809,8 @@ class Oxides(Compo):
             if H2O == -1:
                 H2O = 100 - df.sum(axis=1)
                 H2O[H2O < 0] = 0
+            else:
+                H2O = H2O * df.sum(axis=1) / (100 - H2O)
 
             df["H2O"] = H2O
         if "O" in bulk:
@@ -884,6 +890,8 @@ class Oxides(Compo):
             if H2O == -1:
                 H2O = 100 - df.sum(axis=1)
                 H2O[H2O < 0] = 0
+            else:
+                H2O = H2O * df.sum(axis=1) / (100 - H2O)
 
             df["H2O"] = H2O
         if "O2" in bulk:
