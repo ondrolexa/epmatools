@@ -391,8 +391,10 @@ class Oxides(Compo):
             Oxides: normalized datatable
 
         """
+        res = self._data.copy()
+        res[self._valid] = to * self.df.div(self.sum, axis=0)
         return type(self)(
-            to * self.df.div(self.sum, axis=0),
+            res,
             units=self.units,
             name=self.name,
             desc=f"Normalized to {to}",
