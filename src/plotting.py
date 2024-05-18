@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib.widgets import SpanSelector
 
 
@@ -11,7 +12,7 @@ def plot_grt_profile(em, **kwargs):
         Endmembers have to be properly ordered.
 
     Args:
-        em (pandas.DataFrame): endmembers
+        em (pandas.DataFrame): garnet endmembers
         use_index (bool): When True, xticks are derived from DataFrame index and
             SpanSelector is activated, otherwise ticks
             are sequential. Default False
@@ -51,63 +52,65 @@ def plot_grt_profile(em, **kwargs):
             if kwargs.get("overlap_isopleths", False):
                 print(
                     f"""pt.overlap_isopleths(
-    "g", "xMgX", ({desc["Prp"]["min"]}, {desc["Prp"]["max"]}),
     "g", "xFeX", ({desc["Alm"]["min"]}, {desc["Alm"]["max"]}),
-    "g", "xCaX", ({desc["Grs"]["min"]}, {desc["Grs"]["max"]}),
+    "g", "xMgX", ({desc["Prp"]["min"]}, {desc["Prp"]["max"]}),
     "g", "xMnX", ({desc["Sps"]["min"]}, {desc["Sps"]["max"]}),
+    "g", "xCaX", ({desc["Grs"]["min"]}, {desc["Grs"]["max"]}),
 )"""
                 )
                 plt.ion()
                 kwargs.get("overlap_isopleths").overlap_isopleths(
                     "g",
-                    "xMgX",
-                    (desc["Prp"]["min"], desc["Prp"]["max"]),
-                    "g",
                     "xFeX",
                     (desc["Alm"]["min"], desc["Alm"]["max"]),
                     "g",
-                    "xCaX",
-                    (desc["Grs"]["min"], desc["Grs"]["max"]),
+                    "xMgX",
+                    (desc["Prp"]["min"], desc["Prp"]["max"]),
                     "g",
                     "xMnX",
                     (desc["Sps"]["min"], desc["Sps"]["max"]),
+                    "g",
+                    "xCaX",
+                    (desc["Grs"]["min"], desc["Grs"]["max"]),
                 )
                 plt.ioff()
             elif kwargs.get("search_composition", False):
                 print(
                     f"""pt.search_composition(
-    "g", "xMgX", {desc["Prp"]["mean"]},
     "g", "xFeX", {desc["Alm"]["mean"]},
-    "g", "xCaX", {desc["Grs"]["mean"]},
+    "g", "xMgX", {desc["Prp"]["mean"]},
     "g", "xMnX", {desc["Sps"]["mean"]},
+    "g", "xCaX", {desc["Grs"]["mean"]},
 )"""
                 )
                 plt.ion()
                 kwargs.get("search_composition").search_composition(
                     "g",
-                    "xMgX",
-                    desc["Prp"]["mean"],
-                    "g",
                     "xFeX",
                     desc["Alm"]["mean"],
                     "g",
-                    "xCaX",
-                    desc["Grs"]["mean"],
+                    "xMgX",
+                    desc["Prp"]["mean"],
                     "g",
                     "xMnX",
                     desc["Sps"]["mean"],
+                    "g",
+                    "xCaX",
+                    desc["Grs"]["mean"],
                     isopleths=True,
                 )
                 plt.ioff()
             else:
                 print(desc)
 
-    data1 = kwargs.get("data1", ["Prp", "Grs", "Sps"])
-    data2 = kwargs.get("data2", ["Alm"])
+    data1 = kwargs.get("data1", ["Alm"])
+    data2 = kwargs.get("data2", ["Prp", "Sps", "Grs"])
     datalim1 = kwargs.get("datalim1", None)
     datalim2 = kwargs.get("datalim2", None)
     filename = kwargs.get("filename", None)
     maxticks = kwargs.get("maxticks", 20)
+    colors1 = list(mcolors.TABLEAU_COLORS.keys())[: len(data1)]
+    colors2 = list(mcolors.TABLEAU_COLORS.keys())[len(data1) : len(data1) + len(data2)]
     if kwargs.get("percents", False):
         em = 100 * em
         unit = " [%]"
@@ -127,11 +130,15 @@ def plot_grt_profile(em, **kwargs):
     if kwargs.get("twin", True):
         ax1.set_ylabel(" ".join(data1) + unit)
         h1 = ax1.plot(xvals, em[data1], marker="o", ms=4)
+        for h, color in zip(h1, colors1):
+            h.set_color(color)
         if datalim1 is not None:
             ax1.set_ylim(datalim1[0], datalim1[1])
         ax2 = ax1.twinx()
         ax2.set_ylabel(" ".join(data2) + unit)
-        h2 = ax2.plot(xvals, em[data2], marker="o", ms=4, color="red")
+        h2 = ax2.plot(xvals, em[data2], marker="o", ms=4)
+        for h, color in zip(h2, colors2):
+            h.set_color(color)
         if datalim2 is not None:
             ax2.set_ylim(datalim2[0], datalim2[1])
         plt.legend(
@@ -146,6 +153,8 @@ def plot_grt_profile(em, **kwargs):
     else:
         ax1.set_ylabel(" ".join(data1 + data2) + unit)
         h1 = ax1.plot(xvals, em[data1 + data2], marker="o", ms=4)
+        for h, color in zip(h1, colors1 + colors2):
+            h.set_color(color)
         if datalim1 is not None:
             ax1.set_ylim(datalim1[0], datalim1[1])
         plt.legend(
