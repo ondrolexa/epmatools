@@ -49,6 +49,15 @@ def plot_grt_profile(em, **kwargs):
         if not sel.empty:
             desc = sel.describe()
             if kwargs.get("overlap_isopleths", False):
+                print(
+                    f"""pt.overlap_isopleths(
+    "g", "xMgX", ({desc["Prp"]["min"]}, {desc["Prp"]["max"]}),
+    "g", "xFeX", ({desc["Alm"]["min"]}, {desc["Alm"]["max"]}),
+    "g", "xCaX", ({desc["Grs"]["min"]}, {desc["Grs"]["max"]}),
+    "g", "xMnX", ({desc["Sps"]["min"]}, {desc["Sps"]["max"]}),
+)"""
+                )
+                plt.ion()
                 kwargs.get("overlap_isopleths").overlap_isopleths(
                     "g",
                     "xMgX",
@@ -63,7 +72,17 @@ def plot_grt_profile(em, **kwargs):
                     "xMnX",
                     (desc["Sps"]["min"], desc["Sps"]["max"]),
                 )
+                plt.ioff()
             elif kwargs.get("search_composition", False):
+                print(
+                    f"""pt.search_composition(
+    "g", "xMgX", {desc["Prp"]["mean"]},
+    "g", "xFeX", {desc["Alm"]["mean"]},
+    "g", "xCaX", {desc["Grs"]["mean"]},
+    "g", "xMnX", {desc["Sps"]["mean"]},
+)"""
+                )
+                plt.ion()
                 kwargs.get("search_composition").search_composition(
                     "g",
                     "xMgX",
@@ -79,6 +98,7 @@ def plot_grt_profile(em, **kwargs):
                     desc["Sps"]["mean"],
                     isopleths=True,
                 )
+                plt.ioff()
             else:
                 print(desc)
 
