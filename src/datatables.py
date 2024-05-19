@@ -24,6 +24,7 @@ def oxide2props(f):
 def ion2props(ion):
     return dict(mass=ion.mass, element=ion.element, charge=ion.charge)
 
+
 def compo(**dekwargs):
     def inner(func):
         @wraps(func)
@@ -72,27 +73,36 @@ class Compo:
     def __getitem__(self, index):
         if isinstance(index, str):
             if index in self._valid:
-                return self.df[index]
+                return self.df[index].copy()
             else:
                 raise ValueError(f"Index must be on of {self._valid}")
         if isinstance(index, slice):
-            return type(self)(
-                self._data.loc[index],
-                units=self.units,
-                name=self.name,
-                desc=self.desc,
-            )
+            return self.finalize(self._data.loc[index].copy())
         else:
             raise TypeError("Only string could be used as index.")
 
+    def finalize(self, vals, **kwargs):
+        if hasattr(self, 'mineral'):
+            return type(self)(
+                vals,
+                units=kwargs.get("units", self.units),
+                name=kwargs.get("name", self.name),
+                desc=kwargs.get("desc", self.desc),
+                mineral=self.mineral,
+            )
+        else:
+            return type(self)(
+                vals,
+                units=kwargs.get("units", self.units),
+                name=kwargs.get("name", self.name),
+                desc=kwargs.get("desc", self.desc),
+            )
+
+
     def reversed(self):
         """Return in reversed order"""
-        return type(self)(
-            self._data.reindex(index=self._data.index[::-1]),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        res = self._data.reindex(index=self._data.index[::-1])
+        return self.finalize(res)
 
     def iterrows(self, what=None):
         """Return row iterator yielding tuples (label, row)
@@ -129,9 +139,8 @@ class Compo:
 
     @property
     def mean(self):
-        return type(self)(
-            self.df.mean(axis=0), name=self.name, units=self.units, desc="Average"
-        )
+        res = self.df.mean(axis=0)
+        return self.finalize(res, desc="Mean")
 
     def drop(self, labels):
         """Drop rows based on index
@@ -139,12 +148,7 @@ class Compo:
         Args:
             labels: single or list of indexes to be dropped
         """
-        return type(self)(
-            self._data.drop(labels),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.drop(labels))
 
     def set_index(self, key):
         """Set index of datatable
@@ -154,21 +158,11 @@ class Compo:
                 collection of same length as datatable
         """
         assert key in self._others, f"Column name must be one of {self._others}"
-        return type(self)(
-            self._data.reset_index(drop=True).set_index(key, drop=False),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.reset_index(drop=True).set_index(key, drop=False))
 
     def reset_index(self):
         """Reset index to default pandas.RangeIndex"""
-        return type(self)(
-            self._data.reset_index(drop=True),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.reset_index(drop=True))
 
     def head(self, n=5):
         """Return first n rows
@@ -177,12 +171,7 @@ class Compo:
             n (int): Number of rows. Default 5
 
         """
-        return type(self)(
-            self._data.iloc[:n],
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.iloc[:n])
 
     def tail(self, n=5):
         """Return last n rows
@@ -191,12 +180,7 @@ class Compo:
             n (int): Number of rows. Default 5
 
         """
-        return type(self)(
-            self._data.iloc[-n:],
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.iloc[-n:])
 
     def row(self, label, what=None):
         """Return row as pandas Series
@@ -233,12 +217,7 @@ class Compo:
             ix = pd.Series([str(v) for v in col], index=self._data.index).str.contains(
                 s
             )
-            return type(self)(
-                self._data.loc[ix].copy(),
-                units=self.units,
-                name=self.name,
-                desc=self.desc,
-            )
+            return self.finalize(self._data.loc[ix].copy())
         else:
             if on is None:
                 print("Index is numeric. Try to use .row method")
@@ -254,12 +233,7 @@ class Compo:
         Returns:
             Selected data as datatable
         """
-        return type(self)(
-            self._data.loc[loc].copy(),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-        )
+        return self.finalize(self._data.loc[loc].copy())
 
     def to_latex(self, add_total=True, transpose=True, precision=2):
         """Convert datatable to LaTeX representation
@@ -1116,95 +1090,6 @@ class APFU(Ions):
             )
             .format(precision=self.decimals)
             .to_html()
-        )
-
-    def drop(self, labels):
-        """Drop rows based on index
-
-        Args:
-            labels: single or list of indexes to be dropped
-        """
-        return APFU(
-            self._data.drop(labels),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-            mineral=self.mineral,
-        )
-
-    def reversed(self):
-        """Return in reversed order"""
-        return APFU(
-            self._data.reindex(index=self._data.index[::-1]),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-            mineral=self.mineral,
-        )
-
-    def row(self, label, what=None):
-        """Return row as pandas Series
-
-        Args:
-            label (label): label from index
-            what (str): Which columns are included. None for all, 'valid' for valid,
-                'elements' for elements and 'others' for others. Default None
-
-        """
-        if what is None:
-            return self._data.loc[label].copy()
-        else:
-            return getattr(self, what).loc[label].copy()
-
-    def search(self, s, on=None):
-        """Search subset of data from datatable containing string s in index or column
-
-        Note: Works only with non-numeric index or column
-
-        Args:
-            s (str): Returns all data which contain string s in index.
-
-        Returns:
-            Selected data as datatable
-        """
-        assert isinstance(s, str), "Argument must be string"
-        if on is None:
-            col = self._data.index
-        else:
-            assert on in self._data, f"Column {on} not found"
-            col = self._data[on]
-        if not is_numeric_dtype(col):
-            ix = pd.Series([str(v) for v in col], index=self._data.index).str.contains(
-                s
-            )
-            return APFU(
-                self._data.loc[ix].copy(),
-                units=self.units,
-                name=self.name,
-                desc=self.desc,
-                mineral=self.mineral,
-            )
-        else:
-            if on is None:
-                print("Index is numeric. Try to use .row method")
-            else:
-                print("Selected column is numeric. Try to use .row method")
-
-    def select(self, loc):
-        """Select rows by label(s) or a boolean array
-
-        Args:
-            loc: Single or list of labels, slice or boolean array.
-
-        Returns:
-            Selected data as datatable
-        """
-        return APFU(
-            self._data.loc[loc].copy(),
-            units=self.units,
-            name=self.name,
-            desc=self.desc,
-            mineral=self.mineral,
         )
 
     def endmembers(self, force=False):
