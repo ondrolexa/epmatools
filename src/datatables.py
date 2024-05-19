@@ -24,22 +24,22 @@ def oxide2props(f):
 def ion2props(ion):
     return dict(mass=ion.mass, element=ion.element, charge=ion.charge)
 
-
 def compo(**dekwargs):
-    def decorator(func):
+    def inner(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             df = func(self, *args, **kwargs)
             res = self._data.copy()
             res[self._valid] = df
-            # parse kwargs
-            dekwargs["units"] = dekwargs.get("units", self.units)
-            dekwargs["desc"] = dekwargs.get("desc", self.desc)
-            return type(self)(res, name=self.name, **dekwargs)
-
+            # parse dekwargs
+            newargs = dict(
+                units = wrapper.dekwargs.get("units", self.units),
+                desc = wrapper.dekwargs.get("desc", self.desc)
+            )
+            return type(self)(res, name=self.name, **newargs)
+        wrapper.dekwargs = dekwargs
         return wrapper
-
-    return decorator
+    return inner
 
 
 class Compo:
@@ -381,6 +381,7 @@ class Oxides(Compo):
             .to_html()
         )
 
+    @compo(desc="Normalized")
     def normalize(self, to=100):
         """Normalize the values
 
@@ -391,14 +392,7 @@ class Oxides(Compo):
             Oxides: normalized datatable
 
         """
-        res = self._data.copy()
-        res[self._valid] = to * self.df.div(self.sum, axis=0)
-        return type(self)(
-            res,
-            units=self.units,
-            name=self.name,
-            desc=f"Normalized to {to}",
-        )
+        return to * self.df.div(self.sum, axis=0)
 
     @property
     def elements(self):
