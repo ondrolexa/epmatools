@@ -112,9 +112,10 @@ def plot_grt_profile(em, **kwargs):
     colors1 = list(mcolors.TABLEAU_COLORS.keys())[: len(data1)]
     colors2 = list(mcolors.TABLEAU_COLORS.keys())[len(data1) : len(data1) + len(data2)]
     if kwargs.get("percents", False):
-        em = 100 * em
+        multiple = 100
         unit = " [%]"
     else:
+        multiple = 1
         unit = " [prop.]"
     if kwargs.get("use_index", False):
         xvals = em.index
@@ -129,14 +130,14 @@ def plot_grt_profile(em, **kwargs):
         em.loc[kwargs.get("omit")] = np.nan
     if kwargs.get("twin", True):
         ax1.set_ylabel(" ".join(data1) + unit)
-        h1 = ax1.plot(xvals, em[data1], marker="o", ms=4)
+        h1 = ax1.plot(xvals, multiple * em[data1], marker="o", ms=4)
         for h, color in zip(h1, colors1):
             h.set_color(color)
         if datalim1 is not None:
             ax1.set_ylim(datalim1[0], datalim1[1])
         ax2 = ax1.twinx()
         ax2.set_ylabel(" ".join(data2) + unit)
-        h2 = ax2.plot(xvals, em[data2], marker="o", ms=4)
+        h2 = ax2.plot(xvals, multiple * em[data2], marker="o", ms=4)
         for h, color in zip(h2, colors2):
             h.set_color(color)
         if datalim2 is not None:
@@ -152,7 +153,7 @@ def plot_grt_profile(em, **kwargs):
         )
     else:
         ax1.set_ylabel(" ".join(data1 + data2) + unit)
-        h1 = ax1.plot(xvals, em[data1 + data2], marker="o", ms=4)
+        h1 = ax1.plot(xvals, multiple * em[data1 + data2], marker="o", ms=4)
         for h, color in zip(h1, colors1 + colors2):
             h.set_color(color)
         if datalim1 is not None:

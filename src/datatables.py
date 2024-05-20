@@ -82,22 +82,12 @@ class Compo:
             raise TypeError("Only string could be used as index.")
 
     def finalize(self, vals, **kwargs):
-        if hasattr(self, 'mineral'):
-            return type(self)(
-                vals,
-                units=kwargs.get("units", self.units),
-                name=kwargs.get("name", self.name),
-                desc=kwargs.get("desc", self.desc),
-                mineral=self.mineral,
-            )
-        else:
-            return type(self)(
-                vals,
-                units=kwargs.get("units", self.units),
-                name=kwargs.get("name", self.name),
-                desc=kwargs.get("desc", self.desc),
-            )
-
+        return type(self)(
+            vals,
+            units=kwargs.get("units", self.units),
+            name=kwargs.get("name", self.name),
+            desc=kwargs.get("desc", self.desc),
+        )
 
     def reversed(self):
         """Return in reversed order"""
@@ -1072,7 +1062,7 @@ class APFU(Ions):
     def __init__(self, df, mineral, **kwargs):
         super().__init__(df, **kwargs)
         self.parse_columns()
-        self.decimals = kwargs.get("decimals", 3)
+        self.decimals = kwargs.get("decimals", 4)
         self.mineral = mineral
 
     def __repr__(self):
