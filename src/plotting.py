@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.widgets import SpanSelector
+from matplotlib.ticker import MaxNLocator
 
 
 def plot_grt_profile(em, **kwargs):
@@ -111,6 +112,7 @@ def plot_grt_profile(em, **kwargs):
     maxticks = kwargs.get("maxticks", 20)
     colors1 = list(mcolors.TABLEAU_COLORS.keys())[: len(data1)]
     colors2 = list(mcolors.TABLEAU_COLORS.keys())[len(data1) : len(data1) + len(data2)]
+    fig, ax1 = plt.subplots()
     if kwargs.get("percents", False):
         multiple = 100
         unit = " [%]"
@@ -123,7 +125,6 @@ def plot_grt_profile(em, **kwargs):
     else:
         xvals = range(len(em))
         xlabel = kwargs.get("xlabel", "position")
-    fig, ax1 = plt.subplots()
     ax1.set_xlabel(xlabel)
     # omit
     if kwargs.get("omit", None) is not None:
@@ -168,7 +169,7 @@ def plot_grt_profile(em, **kwargs):
             borderaxespad=0.0,
         )
     # Find at most maxticks ticks on the x-axis at 'nice' locations
-    xloc = plt.MaxNLocator(maxticks - 1)
+    xloc = MaxNLocator(maxticks - 1, integer=True)
     ax1.xaxis.set_major_locator(xloc)
     ax1.tick_params(axis="x", labelrotation=kwargs.get("xticks_rotation", 0))
     fig.tight_layout()

@@ -34,12 +34,14 @@ def compo(**dekwargs):
             res[self._valid] = df
             # parse dekwargs
             newargs = dict(
-                units = wrapper.dekwargs.get("units", self.units),
-                desc = wrapper.dekwargs.get("desc", self.desc)
+                units=wrapper.dekwargs.get("units", self.units),
+                desc=wrapper.dekwargs.get("desc", self.desc),
             )
             return type(self)(res, name=self.name, **newargs)
+
         wrapper.dekwargs = dekwargs
         return wrapper
+
     return inner
 
 
@@ -148,7 +150,9 @@ class Compo:
                 collection of same length as datatable
         """
         assert key in self._others, f"Column name must be one of {self._others}"
-        return self.finalize(self._data.reset_index(drop=True).set_index(key, drop=False))
+        return self.finalize(
+            self._data.reset_index(drop=True).set_index(key, drop=False)
+        )
 
     def reset_index(self):
         """Reset index to default pandas.RangeIndex"""
@@ -1080,6 +1084,15 @@ class APFU(Ions):
             )
             .format(precision=self.decimals)
             .to_html()
+        )
+
+    def finalize(self, vals, **kwargs):
+        return type(self)(
+            vals,
+            mineral=self.mineral,
+            units=kwargs.get("units", self.units),
+            name=kwargs.get("name", self.name),
+            desc=kwargs.get("desc", self.desc),
         )
 
     def endmembers(self, force=False):
