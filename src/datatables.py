@@ -1,6 +1,5 @@
 import pyparsing
 import importlib.resources
-from functools import wraps
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from periodictable import formula, oxygen
@@ -23,26 +22,6 @@ def oxide2props(f):
 
 def ion2props(ion):
     return dict(mass=ion.mass, element=ion.element, charge=ion.charge)
-
-
-def compo(**dekwargs):
-    def inner(func):
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            df = func(self, *args, **kwargs)
-            res = self._data.copy()
-            res[self._valid] = df
-            # parse dekwargs
-            newargs = dict(
-                units=wrapper.dekwargs.get("units", self.units),
-                desc=wrapper.dekwargs.get("desc", self.desc),
-            )
-            return type(self)(res, name=self.name, **newargs)
-
-        wrapper.dekwargs = dekwargs
-        return wrapper
-
-    return inner
 
 
 class Compo:
@@ -300,7 +279,7 @@ class Oxides(Compo):
         >>> d = Oxides(df)
         >>> d = Oxides.from_clipboard()
         >>> d = Oxides.from_excel('analyses.xlsx', sheet_name='Minerals', skiprows=3)
-        >>> d = Oxides.example_data()
+        >>> d = Oxides.from_examples('minerals')
 
     """
 
@@ -349,7 +328,6 @@ class Oxides(Compo):
             .to_html()
         )
 
-    @compo(desc="Normalized")
     def normalize(self, to=100):
         """Normalize the values
 
@@ -360,13 +338,12 @@ class Oxides(Compo):
             Oxides: normalized datatable
 
         """
-        return to * self.df.div(self.sum, axis=0)
+        return self.finalize(to * self.df.div(self.sum, axis=0), desc="Normalized")
 
     @property
     def elements(self):
         return self._data[self._elements].copy()
 
-    @compo(units="mol%")
     def molprop(self):
         """Convert oxides weight percents to molar proportions
 
@@ -375,9 +352,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        return self.df.div(self.props["mass"])
+        return self.finalize(self.df.div(self.props["mass"]), units="mol%")
 
-    @compo(units="wt%")
     def oxwt(self):
         """Convert oxides molar proportions to weight percents
 
@@ -386,9 +362,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "mol%", "Oxides must be molar percents"
-        return self.df.mul(self.props["mass"])
+        return self.finalize(self.df.mul(self.props["mass"]), units="wt%")
 
-    @compo(desc="Elemental weight")
     def elwt(self):
         """Convert oxides weight percents to elements weight percents
 
@@ -399,9 +374,8 @@ class Oxides(Compo):
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
-        return res
+        return Ions(res, units="wt%", desc="Elemental weight")
 
-    @compo(desc="Elemental weight")
     def elwt_oxy(self):
         """Convert oxides weight percents to elements weight percents incl. oxygen
 
@@ -413,17 +387,19 @@ class Oxides(Compo):
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
         res["O{2-}"] = self.sum - res.sum(axis=1)
-        return res
+        return Ions(res, units="wt%", desc="Elemental weight")
 
     @property
-    @compo(units="moles", desc="Cations number")
     def cat_number(self):
-        return self.props["ncat"] * self.molprop().df
+        return self.finalize(
+            self.props["ncat"] * self.molprop().df, units="moles", desc="Cations number"
+        )
 
     @property
-    @compo(units="moles", desc="Oxygens number")
     def oxy_number(self):
-        return self.props["noxy"] * self.molprop().df
+        return self.finalize(
+            self.props["noxy"] * self.molprop().df, units="moles", desc="Oxygens number"
+        )
 
     def onf(self, noxy):
         """Oxygen normalisation factor - ideal oxygens / sum of oxygens
@@ -449,7 +425,6 @@ class Oxides(Compo):
         """
         return ncat / self.cat_number.sum
 
-    @compo(units="charge")
     def charges(self, ncat):
         """Calculates charges based on number of cations
 
@@ -460,8 +435,9 @@ class Oxides(Compo):
             Oxides: charges datatable
 
         """
-        return (
-            self.cat_number.df.multiply(self.cnf(ncat), axis=0) * self.props["charge"]
+        return self.finalize(
+            self.cat_number.df.multiply(self.cnf(ncat), axis=0) * self.props["charge"],
+            units="charge",
         )
 
     def chargedef(self, noxy, ncat):
