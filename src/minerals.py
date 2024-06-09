@@ -46,7 +46,10 @@ class Site:
             free = self.free
             if free > 0:
                 if free > amount:
-                    self.atoms[atom] = amount
+                    if atom in self.atoms:
+                        self.atoms[atom] += amount
+                    else:
+                        self.atoms[atom] = amount
                 else:
                     self.atoms[atom] = free
 
