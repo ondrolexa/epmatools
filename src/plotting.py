@@ -29,9 +29,9 @@ def plot_grt_profile(em, **kwargs):
             `data1` and `data2` args. When ``False`` both groups are plotted on same
             axes. Default ``True``
         data1 (list, optional): list of endmember names in first group. Default
-            `["Prp", "Grs", "Sps"]`
+            `["Alm"]`
         data2 (list, optional): list of endmember names in first group.
-            Default `["Alm"]`
+            Default `["Prp", "Grs", "Sps"]`
         datalim1 (tuple, optional): y-axis limits for first axis or auto when
             ``None``. Default ``None``
         datalim2 (tuple, optional): y-axis limits for second axis or auto when
