@@ -328,7 +328,7 @@ class Oxides(Compo):
             .to_html()
         )
 
-    def normalize(self, to=100):
+    def normalize(self, to=100.0):
         """Normalize the values
 
         Args:
@@ -755,10 +755,12 @@ class Oxides(Compo):
             df["H2O"] = H2O
         if "O" in bulk:
             df["O"] = oxygen
-        df = Oxides(df[bulk]).molprop().normalize()
+        df = Oxides(df[bulk]).molprop().normalize(to=100 - oxygen).df
+        if "O" in bulk:
+            df["O"] = oxygen
 
         print("bulk" + "".join([f"{lbl:>7}" for lbl in bulk]))
-        for ix, row in df._data.iterrows():
+        for ix, row in df.iterrows():
             print("bulk" + "".join([f" {v:6.3f}" for v in row.values]) + f"  % {ix}")
 
     def Perplexbulk(self, H2O=-1, oxygen=0.01, system="MnNCKFMASHTO"):
@@ -836,10 +838,12 @@ class Oxides(Compo):
             df["H2O"] = H2O
         if "O2" in bulk:
             df["O2"] = 2 * oxygen
-        df = Oxides(df[bulk]).molprop().normalize()
+        df = Oxides(df[bulk]).molprop().normalize(to=100 - 2 * oxygen).df
+        if "O2" in bulk:
+            df["O2"] = 2 * oxygen
 
         print("begin thermodynamic component list")
-        for ox, val in df._data.iloc[0].items():
+        for ox, val in df.iloc[0].items():
             print(f"{ox:6s}1 {val:8.5f}      0.00000      0.00000     molar amount")
         print("end thermodynamic component list")
 
