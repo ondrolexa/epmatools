@@ -897,9 +897,9 @@ class Oxides(Compo):
         print("title; comments; db; sysUnit; oxide; frac; frac2")
         print("# BULK-ROCK COMPOSITION")
         for ix, row in df[bulk].iterrows():
-            print(
-                f"{self.name};{self.desc};{db};{sys_in};[{', '.join(row.keys())}];[{', '.join([f"{val:.3f}" for val in row.values])}];"
-            )
+            oxides = ", ".join(row.keys())
+            values = ", ".join([f"{val:.3f}" for val in row.values])
+            print(f"{self.name};{self.desc};{db};{sys_in};[{Oxides}];[{values}];")
 
     @classmethod
     def from_clipboard(cls, index_col=None, vertical=False):

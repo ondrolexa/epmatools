@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 
 
-def read_actlabs(src. **kwargs):
-    if 'header' not in kwargs:
-        kwargs['header'] = 2
+def read_actlabs(src, **kwargs):
+    if "header" not in kwargs:
+        kwargs["header"] = 2
     df = pd.read_excel(src, **kwargs)
     units = df.iloc[0]
     limits = df.iloc[1]
