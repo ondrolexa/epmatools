@@ -696,8 +696,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        if system == "MnNCKFMASHTO":
-            bulk = [
+        bulk = {
+            "MnNCKFMASHTO": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -709,9 +709,8 @@ class Oxides(Compo):
                 "TiO2",
                 "MnO",
                 "O",
-            ]
-        elif system == "NCKFMASHTO":
-            bulk = [
+            ],
+            "NCKFMASHTO": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -722,11 +721,9 @@ class Oxides(Compo):
                 "Na2O",
                 "TiO2",
                 "O",
-            ]
-        elif system == "KFMASH":
-            bulk = ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"]
-        elif system == "NCKFMASHTOCr":
-            bulk = [
+            ],
+            "KFMASH": ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"],
+            "NCKFMASHTOCr": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -737,30 +734,30 @@ class Oxides(Compo):
                 "TiO2",
                 "O",
                 "Cr2O3",
-            ]
-        elif system == "NCKFMASTOCr":
-            bulk = ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "TiO2", "O", "Cr2O3"]
-        else:
-            raise TypeError(f"{system} not implemented")
+            ],
+            "NCKFMASTOCr": ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "TiO2", "O", "Cr2O3"],
+        }
+        assert system in bulk, "Not valid system"
 
         df = self.convert_Fe().apatite_correction().df
         # Water
-        if "H2O" in bulk:
+        if "H2O" in bulk[system]:
             if H2O == -1:
                 H2O = 100 - df.sum(axis=1)
                 H2O[H2O < 0] = 0
             else:
                 H2O = H2O * df.sum(axis=1) / (100 - H2O)
-
             df["H2O"] = H2O
-        if "O" in bulk:
+        use = df.columns.intersection(bulk[system])
+        df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
+        if "O" in bulk[system]:
             df["O"] = oxygen
-        df = Oxides(df[bulk]).molprop().normalize(to=100 - oxygen).df
-        if "O" in bulk:
-            df["O"] = oxygen
-
-        print("bulk" + "".join([f"{lbl:>7}" for lbl in bulk]))
-        for ix, row in df.iterrows():
+        # add missing
+        for lbl in bulk[system]:
+            if lbl not in df:
+                df[lbl] = 0.0
+        print("bulk" + "".join([f"{lbl:>7}" for lbl in bulk[system]]))
+        for ix, row in df[bulk[system]].iterrows():
             print("bulk" + "".join([f" {v:6.3f}" for v in row.values]) + f"  % {ix}")
 
     def Perplexbulk(self, H2O=-1, oxygen=0.01, system="MnNCKFMASHTO"):
@@ -779,8 +776,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        if system == "MnNCKFMASHTO":
-            bulk = [
+        bulk = {
+            "MnNCKFMASHTO": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -792,9 +789,8 @@ class Oxides(Compo):
                 "TiO2",
                 "MnO",
                 "O2",
-            ]
-        elif system == "NCKFMASHTO":
-            bulk = [
+            ],
+            "NCKFMASHTO": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -805,11 +801,9 @@ class Oxides(Compo):
                 "Na2O",
                 "TiO2",
                 "O2",
-            ]
-        elif system == "KFMASH":
-            bulk = ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"]
-        elif system == "NCKFMASHTOCr":
-            bulk = [
+            ],
+            "KFMASH": ["H2O", "SiO2", "Al2O3", "MgO", "FeO", "K2O"],
+            "NCKFMASHTOCr": [
                 "H2O",
                 "SiO2",
                 "Al2O3",
@@ -820,35 +814,44 @@ class Oxides(Compo):
                 "TiO2",
                 "O2",
                 "Cr2O3",
-            ]
-        elif system == "NCKFMASTOCr":
-            bulk = ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "TiO2", "O2", "Cr2O3"]
-        else:
-            raise TypeError(f"{system} not implemented")
+            ],
+            "NCKFMASTOCr": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "TiO2",
+                "O2",
+                "Cr2O3",
+            ],
+        }
+        assert system in bulk, "Not valid system"
 
         df = self.convert_Fe().apatite_correction().df
         # Water
-        if "H2O" in bulk:
+        if "H2O" in bulk[system]:
             if H2O == -1:
                 H2O = 100 - df.sum(axis=1)
                 H2O[H2O < 0] = 0
             else:
                 H2O = H2O * df.sum(axis=1) / (100 - H2O)
-
             df["H2O"] = H2O
-        if "O2" in bulk:
+        use = df.columns.intersection(bulk[system])
+        df = Oxides(df[use]).molprop().normalize(to=100 - 2 * oxygen).df
+        if "O2" in bulk[system]:
             df["O2"] = 2 * oxygen
-        df = Oxides(df[bulk]).molprop().normalize(to=100 - 2 * oxygen).df
-        if "O2" in bulk:
-            df["O2"] = 2 * oxygen
-
+        # add missing
+        for lbl in bulk[system]:
+            if lbl not in df:
+                df[lbl] = 0.0
         print("begin thermodynamic component list")
-        for ox, val in df.iloc[0].items():
+        for ox, val in df[bulk[system]].iloc[0].items():
             print(f"{ox:6s}1 {val:8.5f}      0.00000      0.00000     molar amount")
         print("end thermodynamic component list")
 
-    def MAGEMin(self, H2O=-1, oxygen=0.01, db="mp", sys_in="wt"):
-        """Print oxides formatted as THERMOCALC bulk script
+    def MAGEMin(self, H2O=-1, oxygen=0.01, db="mp", sys_in="mol"):
+        """Print oxides formatted as MAGEMin bulk file
 
         Note:
             The CaO is recalculate using apatite correction based on P205 if available.
@@ -858,48 +861,97 @@ class Oxides(Compo):
                 Default -1.
             oxygen (float): value to calculate moles of ferric iron.
                 Moles FeO = FeOtot - 2O and moles Fe2O3 = O. Default 0.01
-            db (str): MAGEMin database. "mp" or "ig", default is "mp"
-            sys_in (str): system comp "wt" or "mol", default is "wt"
+            db (str): MAGEMin database. 'mp' metapelite, 'mb' metabasite, 'ig' igneous H18->G23
+                'igad' igneous alkaline dry, 'um' ultramafic, 'ume' ultramafic extended,
+                'mtl' mantle. Default is "mp"
+            sys_in (str): system comp "wt" or "mol". Default is "mol"
 
         """
         assert self.units == "wt%", "Oxides must be in weight pecents"
-        bulk = [
-            "SiO2",
-            "Al2O3",
-            "CaO",
-            "MgO",
-            "FeO",
-            "K2O",
-            "Na2O",
-            "TiO2",
-            "O",
-            "MnO",
-            "H2O",
-        ]
+        bulk = {
+            "ig": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "Cr2O3",
+                "H2O",
+            ],
+            "igad": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "Cr2O3",
+            ],
+            "mp": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "MnO",
+                "H2O",
+            ],
+            "mb": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "H2O",
+            ],
+            "um": ["SiO2", "Al2O3", "MgO", "FeO", "O", "H2O", "S"],
+            "ume": ["SiO2", "Al2O3", "MgO", "FeO", "O", "H2O", "S", "CaO", "Na2O"],
+            "mtl": ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "Na2O"],
+        }
+        assert db in bulk, "Not valid database"
 
         df = self.convert_Fe().apatite_correction().df
         # Water
-        if H2O == -1:
-            H2O = 100 - df.sum(axis=1)
-            H2O[H2O < 0] = 0
-        else:
-            H2O = H2O * df.sum(axis=1) / (100 - H2O)
-
-        df["H2O"] = H2O
-        df["O"] = oxygen
+        if "H2O" in bulk[db]:
+            if H2O == -1:
+                H2O = 100 - df.sum(axis=1)
+                H2O[H2O < 0] = 0
+            else:
+                H2O = H2O * df.sum(axis=1) / (100 - H2O)
+            df["H2O"] = H2O
+        use = df.columns.intersection(bulk[db])
         if sys_in == "mol":
-            df = Oxides(df[bulk]).molprop().normalize(to=100 - oxygen).df
+            df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
         else:
-            df = Oxides(df[bulk]).normalize(to=100 - oxygen).df
-        df["O"] = oxygen
-
+            df = Oxides(df[use]).normalize(to=100 - oxygen).df
+        if "O" in bulk[db]:
+            df["O"] = oxygen
+        # add missing
+        for lbl in bulk[db]:
+            if lbl not in df:
+                df[lbl] = 0.0
         print("# HEADER")
         print("title; comments; db; sysUnit; oxide; frac; frac2")
         print("# BULK-ROCK COMPOSITION")
-        for ix, row in df[bulk].iterrows():
+        for ix, row in df[bulk[db]].iterrows():
             oxides = ", ".join(row.keys())
             values = ", ".join([f"{val:.3f}" for val in row.values])
-            print(f"{self.name};{self.desc};{db};{sys_in};[{Oxides}];[{values}];")
+            print(f"{self.name};{self.desc};{db};{sys_in};[{oxides}];[{values}];")
 
     @classmethod
     def from_clipboard(cls, index_col=None, vertical=False):
