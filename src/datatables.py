@@ -742,12 +742,13 @@ class Oxides(Compo):
         df = self.convert_Fe().apatite_correction().df
         # Water
         if "H2O" in bulk[system]:
-            if H2O == -1:
-                H2O = 100 - df.sum(axis=1)
-                H2O[H2O < 0] = 0
-            else:
-                H2O = H2O * df.sum(axis=1) / (100 - H2O)
-            df["H2O"] = H2O
+            if "H2O" not in df:
+                if H2O == -1:
+                    H2O = 100 - df.sum(axis=1)
+                    H2O[H2O < 0] = 0
+                else:
+                    H2O = H2O * df.sum(axis=1) / (100 - H2O)
+                df["H2O"] = H2O
         use = df.columns.intersection(bulk[system])
         df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
         if "O" in bulk[system]:
@@ -831,12 +832,13 @@ class Oxides(Compo):
         df = self.convert_Fe().apatite_correction().df
         # Water
         if "H2O" in bulk[system]:
-            if H2O == -1:
-                H2O = 100 - df.sum(axis=1)
-                H2O[H2O < 0] = 0
-            else:
-                H2O = H2O * df.sum(axis=1) / (100 - H2O)
-            df["H2O"] = H2O
+            if "H2O" not in df:
+                if H2O == -1:
+                    H2O = 100 - df.sum(axis=1)
+                    H2O[H2O < 0] = 0
+                else:
+                    H2O = H2O * df.sum(axis=1) / (100 - H2O)
+                df["H2O"] = H2O
         use = df.columns.intersection(bulk[system])
         df = Oxides(df[use]).molprop().normalize(to=100 - 2 * oxygen).df
         if "O2" in bulk[system]:
@@ -861,9 +863,12 @@ class Oxides(Compo):
                 Default -1.
             oxygen (float): value to calculate moles of ferric iron.
                 Moles FeO = FeOtot - 2O and moles Fe2O3 = O. Default 0.01
-            db (str): MAGEMin database. 'mp' metapelite, 'mb' metabasite, 'ig' igneous H18->G23
-                'igad' igneous alkaline dry, 'um' ultramafic, 'ume' ultramafic extended,
-                'mtl' mantle. Default is "mp"
+            db (str): MAGEMin database. 'mp' metapelite (White et al. 2014), 'mb' metabasite
+                (Green et al. 2016), 'ig' igneous (Holland et al. 2018), 'um' ultramafic
+                (Evans & Frost 2021), 'ume' ultramafic extended (Evans & Frost 2021 + pl, hb and aug
+                from Green et al. 2016), 'mpe' Metapelite extended (White et al. 2014,
+                Green et al. 2016, Evans & Frost 2021), 'mtl' mantle (Holland et al. 2013).
+                Default is "mp"
             sys_in (str): system comp "wt" or "mol". Default is "mol"
 
         """
@@ -881,18 +886,6 @@ class Oxides(Compo):
                 "O",
                 "Cr2O3",
                 "H2O",
-            ],
-            "igad": [
-                "SiO2",
-                "Al2O3",
-                "CaO",
-                "MgO",
-                "FeO",
-                "K2O",
-                "Na2O",
-                "TiO2",
-                "O",
-                "Cr2O3",
             ],
             "mp": [
                 "SiO2",
@@ -921,6 +914,21 @@ class Oxides(Compo):
             ],
             "um": ["SiO2", "Al2O3", "MgO", "FeO", "O", "H2O", "S"],
             "ume": ["SiO2", "Al2O3", "MgO", "FeO", "O", "H2O", "S", "CaO", "Na2O"],
+            "mpe": [
+                "SiO2",
+                "Al2O3",
+                "CaO",
+                "MgO",
+                "FeO",
+                "K2O",
+                "Na2O",
+                "TiO2",
+                "O",
+                "MnO",
+                "H2O",
+                "CO2",
+                "S"
+            ],
             "mtl": ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "Na2O"],
         }
         assert db in bulk, "Not valid database"
@@ -928,12 +936,13 @@ class Oxides(Compo):
         df = self.convert_Fe().apatite_correction().df
         # Water
         if "H2O" in bulk[db]:
-            if H2O == -1:
-                H2O = 100 - df.sum(axis=1)
-                H2O[H2O < 0] = 0
-            else:
-                H2O = H2O * df.sum(axis=1) / (100 - H2O)
-            df["H2O"] = H2O
+            if "H2O" not in df:
+                if H2O == -1:
+                    H2O = 100 - df.sum(axis=1)
+                    H2O[H2O < 0] = 0
+                else:
+                    H2O = H2O * df.sum(axis=1) / (100 - H2O)
+                df["H2O"] = H2O
         use = df.columns.intersection(bulk[db])
         if sys_in == "mol":
             df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
@@ -951,10 +960,10 @@ class Oxides(Compo):
         for ix, row in df[bulk[db]].iterrows():
             oxides = ", ".join(row.keys())
             values = ", ".join([f"{val:.3f}" for val in row.values])
-            print(f"{self.name};{self.desc};{db};{sys_in};[{oxides}];[{values}];")
+            print(f"{ix};{self.desc};{db};{sys_in};[{oxides}];[{values}];")
 
     @classmethod
-    def from_clipboard(cls, index_col=None, vertical=False):
+    def from_clipboard(cls, **kwargs):
         """Parse datatable from clipboard.
 
         Note:
@@ -963,20 +972,20 @@ class Oxides(Compo):
             available as ``Oxides.others`` and are not used for calculations.
 
         Args:
-            index_col (str or None, optional): name of the columns used for index.
-                Default None.
             vertical (bool, optional): Set ``True`` when oxides are aranged in rows.
                 Default ``False``
+            **kwargs: all keyword arguments are passed to ``Oxides``
 
         Returns:
             Oxides: datatable
 
         """
+        vertical = kwargs.pop('vertical', False)
         df = pd.read_clipboard(index_col=False)
         if vertical:
             df = df.set_index(df.columns[0]).T
             df.columns.name = None
-        return cls(df, index_col=index_col)
+        return cls(df, **kwargs)
 
     @classmethod
     def from_excel(cls, filename, **kwargs):
@@ -990,15 +999,22 @@ class Oxides(Compo):
         Args:
             filename (str): string path to file. For other possibility see
                 ``pandas.read_excel``
+            units (str, optional): units of datatable. Default is `"wt%"`
+            name (str, optional): name of datatable. Default is `"Compo"`
+            desc (str, optional): description of datatable. Default is `"Original data"`
+            index_col (str, optional): name of column used as index. Default ``None``
             **kwargs: all keyword arguments are passed to ``pandas.read_excel``
 
         Returns:
             Oxides: datatable
 
         """
+        units = kwargs.pop("units", "wt%")
+        name = kwargs.pop("name", "Compo")
+        desc = kwargs.pop("desc", "Original data")
         index_col = kwargs.pop("index_col", None)
         df = pd.read_excel(filename, **kwargs)
-        return cls(df, index_col=index_col)
+        return cls(df, units=units, name=name, desc=desc, index_col=index_col)
 
     @classmethod
     def from_examples(cls, example=None):
