@@ -34,7 +34,7 @@ docs = [
     "sphinx_rtd_theme",
 ]
 jupyter = ["jupyterlab"]
-tests = ["pytest", "pytest-cov", "nbval"]
+tests = ["pytest", "pytest-cov", "nbval", "Jinja2"]
 
 [build-system]
 requires = ["hatchling"]
