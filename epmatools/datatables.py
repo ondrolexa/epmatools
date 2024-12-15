@@ -252,7 +252,7 @@ class Oxides(Compo):
     - passing `pandas.DataFrame` with analyses in rows and oxides in columns
     - from clipboard using ``from_clipboard()`` method
     - from Excel using ``from_excel()`` method
-    - using ``example_data`` method
+    - using ``from_examples`` method
 
     Args:
         df (pandas.DataFrame): plunge direction of linear feature in degrees
@@ -927,7 +927,7 @@ class Oxides(Compo):
                 "MnO",
                 "H2O",
                 "CO2",
-                "S"
+                "S",
             ],
             "mtl": ["SiO2", "Al2O3", "CaO", "MgO", "FeO", "Na2O"],
         }
@@ -980,7 +980,7 @@ class Oxides(Compo):
             Oxides: datatable
 
         """
-        vertical = kwargs.pop('vertical', False)
+        vertical = kwargs.pop("vertical", False)
         df = pd.read_clipboard(index_col=False)
         if vertical:
             df = df.set_index(df.columns[0]).T
@@ -1158,6 +1158,7 @@ class APFU(Ions):
         name (str): name of datatable.
         desc (str): description of datatable.
         reminder (APFU): Returns remaining atoms after mineral formula occupation
+        error (pandas.Series): Returns percentage error of calculated cations
 
     Example:
         >>> d = APFU(df)
@@ -1234,12 +1235,10 @@ class APFU(Ions):
 
     @property
     def reminder(self):
-        """Returns reminding cations"""
         return self.df - self.mineral_apfu().df
 
     @property
     def error(self):
-        """Returns percentage error of calculated cations"""
         return 100 * abs(self.mineral.ncat - self.sum) / self.sum
 
     def table(self, add_total=True, transpose=True):

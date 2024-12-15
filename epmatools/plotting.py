@@ -178,7 +178,7 @@ def plot_grt_profile(em, **kwargs):
     else:
         # if index used, spanselector created
         if kwargs.get("use_index", False):
-            span = SpanSelector(
+            _ = SpanSelector(
                 ax1,
                 onselect,
                 "horizontal",

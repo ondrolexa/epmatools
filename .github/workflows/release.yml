@@ -1,0 +1,17 @@
+name: PyPi Publisher
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  pypi-publisher:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: thevickypedia/pypi-publisher@v3
+        env:
+          token: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          python-version: "3.10"
+          skip-existing: true

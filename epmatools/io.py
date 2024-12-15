@@ -154,5 +154,5 @@ def from_line_data_separated(src):
         els = re.findall(f"{prefix}(.*?){suffix}", linedir.stem)
         assert len(els) == 1, "Element name parsing error"
         maps[els[0]] = np.loadtxt(csv).reshape((rows, cols)).astype(int)
-        print(f"{ix+1}/{len(linedirs)} {els[0]} parsed...")
+        print(f"{ix + 1}/{len(linedirs)} {els[0]} parsed...")
     return maps, src.stem

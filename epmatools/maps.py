@@ -602,7 +602,7 @@ class Mapset:
         cmin = np.random.randint(0, self.shape[1] - cols)
         return self.clip(rmin, rmin + rows, cmin, cmin + cols, **kwargs)
 
-    ### Plotting
+    # Plotting
 
     def show(self, expr=None, **kwargs):
         """Show map on figure
@@ -752,7 +752,7 @@ class Mapset:
             ax.set_title(f"Gaussian KDE - {title}")
         plt.show()
 
-    ### Class methods for phase mapping
+    # Class methods for phase mapping
 
     def create_clusters(self, **kwargs):
         """Calculate KMeans clustering of elemental maps
@@ -1125,12 +1125,12 @@ class MapLegend:
         for label, v in self.store.items():
             cnt = sum([count_value(v) for v in v["values"]])
             if cnt > 0:
-                info = f" ({100*cnt / tot:.2f}%) {list(v['values'])}"
+                info = f" ({100 * cnt / tot:.2f}%) {list(v['values'])}"
                 patch = mpatches.Patch(color=v["color"], label=label + info)
                 patches.append(patch)
         if other > 0:
             opatch = mpatches.Patch(
-                color="none", label=f"Others ({100*other / tot:.2f}%)"
+                color="none", label=f"Others ({100 * other / tot:.2f}%)"
             )
             patches.append(opatch)
         return patches
