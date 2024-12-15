@@ -1,6 +1,6 @@
 [project]
 name = "epmatools"
-version = "0.3.0"
+version = "0.1.0"
 description = "Tools to manipulate EPMA analyses"
 readme = "README.md"
 maintainers = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
