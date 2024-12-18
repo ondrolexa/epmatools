@@ -25,6 +25,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+extra = ["jupyterlab"]
+tests = ["pytest", "pytest-cov", "nbval", "Jinja2"]
 docs = [
     "ipykernel",
     "nbsphinx",
@@ -33,8 +35,21 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
-jupyter = ["jupyterlab"]
-tests = ["pytest", "pytest-cov", "nbval", "Jinja2"]
+dev = [
+    "black",
+    "jupyterlab",
+    "pytest",
+    "pytest-cov",
+    "nbval",
+    "Jinja2",
+    "ipykernel",
+    "nbsphinx",
+    "nbsphinx-link",
+    "sphinx",
+    "sphinx_mdinclude",
+    "sphinx_rtd_theme",
+]
+
 
 [build-system]
 requires = ["hatchling"]
