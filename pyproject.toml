@@ -17,6 +17,7 @@ dependencies = [
     "scipy",
     "h5py",
     "pandas",
+    "Jinja2",
     "scikit-learn",
     "colorcet",
     "xlrd",
