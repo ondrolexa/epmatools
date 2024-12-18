@@ -26,7 +26,7 @@ dependencies = [
 
 [project.optional-dependencies]
 extra = ["jupyterlab"]
-tests = ["pytest", "pytest-cov", "nbval", "Jinja2"]
+tests = ["pytest", "pytest-cov", "nbval"]
 docs = [
     "ipykernel",
     "nbsphinx",
@@ -41,7 +41,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "nbval",
-    "Jinja2",
     "ipykernel",
     "nbsphinx",
     "nbsphinx-link",
