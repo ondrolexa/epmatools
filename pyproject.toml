@@ -37,17 +37,8 @@ docs = [
     "sphinx_rtd_theme",
 ]
 dev = [
+    "epmatools[extra,tests,docs]",
     "black",
-    "jupyterlab",
-    "pytest",
-    "pytest-cov",
-    "nbval",
-    "ipykernel",
-    "nbsphinx",
-    "nbsphinx-link",
-    "sphinx",
-    "sphinx_mdinclude",
-    "sphinx_rtd_theme",
 ]
 
 
