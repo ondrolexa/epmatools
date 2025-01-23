@@ -19,6 +19,7 @@ def read_actlabs(src, **kwargs):
             df.loc[ix, col] = np.nan
 
     df = df.astype(float)
+    df = df.rename(columns={"Fe2O3(T)": "Fe2O3"})
     return df, units, limits, method
 
 
