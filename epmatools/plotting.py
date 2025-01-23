@@ -53,10 +53,10 @@ def plot_grt_profile(em, **kwargs):
             if kwargs.get("overlap_isopleths", False):
                 print(
                     f"""pt.overlap_isopleths(
-    "g", "xFeX", ({desc["Alm"]["min"]}, {desc["Alm"]["max"]}),
-    "g", "xMgX", ({desc["Prp"]["min"]}, {desc["Prp"]["max"]}),
-    "g", "xMnX", ({desc["Sps"]["min"]}, {desc["Sps"]["max"]}),
-    "g", "xCaX", ({desc["Grs"]["min"]}, {desc["Grs"]["max"]}),
+    "g", "xFeX", ({desc["Alm"]["min"]:g}, {desc["Alm"]["max"]:g}),
+    "g", "xMgX", ({desc["Prp"]["min"]:g}, {desc["Prp"]["max"]:g}),
+    "g", "xMnX", ({desc["Sps"]["min"]:g}, {desc["Sps"]["max"]:g}),
+    "g", "xCaX", ({desc["Grs"]["min"]:g}, {desc["Grs"]["max"]:g}),
 )"""
                 )
                 plt.ion()
@@ -78,10 +78,10 @@ def plot_grt_profile(em, **kwargs):
             elif kwargs.get("search_composition", False):
                 print(
                     f"""pt.search_composition(
-    "g", "xFeX", {desc["Alm"]["mean"]},
-    "g", "xMgX", {desc["Prp"]["mean"]},
-    "g", "xMnX", {desc["Sps"]["mean"]},
-    "g", "xCaX", {desc["Grs"]["mean"]},
+    "g", "xFeX", {desc["Alm"]["mean"]:g},
+    "g", "xMgX", {desc["Prp"]["mean"]:g},
+    "g", "xMnX", {desc["Sps"]["mean"]:g},
+    "g", "xCaX", {desc["Grs"]["mean"]:g},
 )"""
                 )
                 plt.ion()
