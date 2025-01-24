@@ -647,7 +647,7 @@ class Oxides(Compo):
             res[df.columns] = df
             return Oxides(res, name=self.name, desc="ap corrected")
         else:
-            print("Not Ca and P in data. Nothing changed")
+            print("Apatite correction skipped.")
             return self
 
     def check_cations(self, noxy, ncat, confidence=None):
