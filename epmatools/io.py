@@ -5,9 +5,9 @@ import pandas as pd
 
 
 def read_actlabs(src, **kwargs):
-    if "header" not in kwargs:
-        kwargs["header"] = 2
-    df = pd.read_excel(src, **kwargs)
+    if "skiprows" not in kwargs:
+        kwargs["skiprows"] = 2
+    df = pd.read_excel(src, **kwargs).rename(columns={"Fe2O3(T)": "Fe2O3"})
     units = df.iloc[0]
     limits = df.iloc[1]
     method = df.iloc[2]
@@ -19,7 +19,6 @@ def read_actlabs(src, **kwargs):
             df.loc[ix, col] = np.nan
 
     df = df.astype(float)
-    df = df.rename(columns={"Fe2O3(T)": "Fe2O3"})
     return df, units, limits, method
 
 
