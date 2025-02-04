@@ -47,6 +47,9 @@ class Compo:
                 df.index = [v.strip() for v in df.index]
         self._data = df.copy()
 
+    def parse_columns(self):
+        pass
+
     def __len__(self):
         """Return number of data in datatable"""
         return self._data.shape[0]
@@ -61,6 +64,11 @@ class Compo:
             return self.finalize(self._data.loc[index].copy())
         else:
             raise TypeError("Only string could be used as index.")
+
+    def __setitem__(self, index, value):
+        col = pd.Series(value, index=self._data.index, name=index)
+        self._data = pd.concat([self._data, col], axis=1)
+        self.parse_columns()
 
     def finalize(self, vals, **kwargs):
         return type(self)(
@@ -84,7 +92,7 @@ class Compo:
 
         """
         if what is None:
-            return self._data.iterrows()
+            return self.df.iterrows()
         else:
             return getattr(self, what).iterrows()
 
@@ -165,7 +173,7 @@ class Compo:
 
         """
         if what is None:
-            return self._data.loc[label].copy()
+            return self.df.loc[label].copy()
         else:
             return getattr(self, what).loc[label].copy()
 
@@ -374,7 +382,9 @@ class Oxides(Compo):
         assert self.units == "wt%", "Oxides must be weight percents"
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
-        return Ions(res, units="wt%", desc="Elemental weight")
+        return Ions(
+            pd.concat([res, self.others], axis=1), units="wt%", desc="Elemental weight"
+        )
 
     def elwt_oxy(self):
         """Convert oxides weight percents to elements weight percents incl. oxygen
@@ -387,7 +397,9 @@ class Oxides(Compo):
         res = self.df.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
         res["O{2-}"] = self.sum - res.sum(axis=1)
-        return Ions(res, units="wt%", desc="Elemental weight")
+        return Ions(
+            pd.concat([res, self.others], axis=1), units="wt%", desc="Elemental weight"
+        )
 
     @property
     def cat_number(self):
@@ -470,14 +482,14 @@ class Oxides(Compo):
             df = self.cat_number.df.multiply(self.cnf(ncat), axis=0)
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
-                df,
+                pd.concat([df, self.others], axis=1),
                 desc=f"Cations p.f.u based on {ncat} cations",
             )
         else:
             df = self.cat_number.df.multiply(self.onf(noxy), axis=0)
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
-                df,
+                pd.concat([df, self.others], axis=1),
                 desc=f"Cations p.f.u based on {noxy} oxygens",
             )
 
@@ -504,7 +516,7 @@ class Oxides(Compo):
             df = dt.cat_number.df.multiply(dt.cnf(ncat), axis=0)
             df.columns = [str(cat) for cat in dt.props["cation"]]
             return APFU(
-                df,
+                pd.concat([df, self.others], axis=1),
                 mineral=mineral,
                 name=self.name,
                 desc=f"Cations p.f.u based on {ncat} cations",
@@ -513,7 +525,7 @@ class Oxides(Compo):
             df = dt.cat_number.df.multiply(dt.onf(noxy), axis=0)
             df.columns = [str(cat) for cat in dt.props["cation"]]
             return APFU(
-                df,
+                pd.concat([df, self.others], axis=1),
                 mineral=mineral,
                 name=self.name,
                 desc=f"Cations p.f.u based on {noxy} oxygens",
