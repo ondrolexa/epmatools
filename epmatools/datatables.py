@@ -57,7 +57,7 @@ class Compo:
     def __getitem__(self, index):
         if isinstance(index, str):
             if index in self._valid:
-                return self.df[index].copy()
+                return self.valid[index].copy()
             else:
                 raise ValueError(f"Index must be on of {self._valid}")
         if isinstance(index, slice):
@@ -92,15 +92,17 @@ class Compo:
 
         """
         if what is None:
-            return self.df.iterrows()
+            return self.valid.iterrows()
         else:
             return getattr(self, what).iterrows()
 
     @property
     def df(self):
-        return self._data[self._valid].copy()
+        return self._data.copy()
 
-    valid = df
+    @property
+    def valid(self):
+        return self._data[self._valid].copy()
 
     @property
     def others(self):
@@ -112,13 +114,13 @@ class Compo:
 
     @property
     def sum(self):
-        res = self.df.sum(axis=1)
+        res = self.valid.sum(axis=1)
         res.name = "Total"
         return res
 
     @property
     def mean(self):
-        res = self.df.mean(axis=0)
+        res = self.valid.mean(axis=0)
         return self.finalize(res, desc="Mean")
 
     def drop(self, labels):
@@ -163,17 +165,18 @@ class Compo:
         """
         return self.finalize(self._data.iloc[-n:])
 
-    def row(self, label, what=None):
+    def row(self, label, what="valid"):
         """Return row as pandas Series
 
         Args:
             label (label): label from index
-            what (str): Which columns are included. None for all, 'valid' for valid,
-                'elements' for elements and 'others' for others. Default None
+            what (str): Which columns are included. None for valid, 'elements'
+                for elements, 'others' for others and 'all' for all.
+                Default 'valid'
 
         """
         if what is None:
-            return self.df.loc[label].copy()
+            return self._data.loc[label].copy()
         else:
             return getattr(self, what).loc[label].copy()
 
@@ -323,13 +326,13 @@ class Oxides(Compo):
         return "\n".join(
             [
                 f"Oxides: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.round(decimals=self.decimals)}",
+                f"{self.valid.round(decimals=self.decimals)}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.style.set_caption(
+            self.valid.style.set_caption(
                 f"Oxides: {self.name} [{self.units}] - {self.desc}"
             )
             .format(precision=self.decimals)
@@ -346,7 +349,8 @@ class Oxides(Compo):
             Oxides: normalized datatable
 
         """
-        return self.finalize(to * self.df.div(self.sum, axis=0), desc="Normalized")
+        res = to * self.valid.div(self.sum, axis=0)
+        return self.finalize(pd.concat([res, self.others], axis=1), desc="Normalized")
 
     @property
     def elements(self):
@@ -360,7 +364,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        return self.finalize(self.df.div(self.props["mass"]), units="mol%")
+        res = self.valid.div(self.props["mass"])
+        return self.finalize(pd.concat([res, self.others], axis=1), units="mol%")
 
     def oxwt(self):
         """Convert oxides molar proportions to weight percents
@@ -370,7 +375,8 @@ class Oxides(Compo):
 
         """
         assert self.units == "mol%", "Oxides must be molar percents"
-        return self.finalize(self.df.mul(self.props["mass"]), units="wt%")
+        res = self.valid.mul(self.props["mass"])
+        return self.finalize(pd.concat([res, self.others], axis=1), units="wt%")
 
     def elwt(self):
         """Convert oxides weight percents to elements weight percents
@@ -380,7 +386,7 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        res = self.df.mul(self.props["elfrac"])
+        res = self.valid.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
         return Ions(
             pd.concat([res, self.others], axis=1), units="wt%", desc="Elemental weight"
@@ -394,7 +400,7 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        res = self.df.mul(self.props["elfrac"])
+        res = self.valid.mul(self.props["elfrac"])
         res.columns = [str(cat) for cat in self.props["cation"]]
         res["O{2-}"] = self.sum - res.sum(axis=1)
         return Ions(
@@ -403,14 +409,20 @@ class Oxides(Compo):
 
     @property
     def cat_number(self):
+        res = self.props["ncat"] * self.molprop().valid
         return self.finalize(
-            self.props["ncat"] * self.molprop().df, units="moles", desc="Cations number"
+            pd.concat([res, self.others], axis=1),
+            units="moles",
+            desc="Cations number",
         )
 
     @property
     def oxy_number(self):
+        res = self.props["noxy"] * self.molprop().valid
         return self.finalize(
-            self.props["noxy"] * self.molprop().df, units="moles", desc="Oxygens number"
+            pd.concat([res, self.others], axis=1),
+            units="moles",
+            desc="Oxygens number",
         )
 
     def onf(self, noxy):
@@ -447,8 +459,12 @@ class Oxides(Compo):
             Oxides: charges datatable
 
         """
+        res = (
+            self.cat_number.valid.multiply(self.cnf(ncat), axis=0)
+            * self.props["charge"]
+        )
         return self.finalize(
-            self.cat_number.df.multiply(self.cnf(ncat), axis=0) * self.props["charge"],
+            pd.concat([res, self.others], axis=1),
             units="charge",
         )
 
@@ -479,14 +495,14 @@ class Oxides(Compo):
 
         """
         if tocat:
-            df = self.cat_number.df.multiply(self.cnf(ncat), axis=0)
+            df = self.cat_number.valid.multiply(self.cnf(ncat), axis=0)
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
                 pd.concat([df, self.others], axis=1),
                 desc=f"Cations p.f.u based on {ncat} cations",
             )
         else:
-            df = self.cat_number.df.multiply(self.onf(noxy), axis=0)
+            df = self.cat_number.valid.multiply(self.onf(noxy), axis=0)
             df.columns = [str(cat) for cat in self.props["cation"]]
             return Ions(
                 pd.concat([df, self.others], axis=1),
@@ -513,7 +529,7 @@ class Oxides(Compo):
         else:
             dt = self
         if tocat:
-            df = dt.cat_number.df.multiply(dt.cnf(ncat), axis=0)
+            df = dt.cat_number.valid.multiply(dt.cnf(ncat), axis=0)
             df.columns = [str(cat) for cat in dt.props["cation"]]
             return APFU(
                 pd.concat([df, self.others], axis=1),
@@ -522,7 +538,7 @@ class Oxides(Compo):
                 desc=f"Cations p.f.u based on {ncat} cations",
             )
         else:
-            df = dt.cat_number.df.multiply(dt.onf(noxy), axis=0)
+            df = dt.cat_number.valid.multiply(dt.onf(noxy), axis=0)
             df.columns = [str(cat) for cat in dt.props["cation"]]
             return APFU(
                 pd.concat([df, self.others], axis=1),
@@ -600,9 +616,9 @@ class Oxides(Compo):
 
         """
         assert self.units == "wt%", "Oxides must be weight percents"
-        charge = self.cat_number.df.multiply(self.cnf(ncat), axis=0)
+        charge = self.cat_number.valid.multiply(self.cnf(ncat), axis=0)
         if ("Fe2O3" in self.names) & ("FeO" not in self.names):
-            charge["Fe2O3"].loc[pd.isna(self.df["Fe2O3"])] = 0
+            charge["Fe2O3"].loc[pd.isna(self.valid["Fe2O3"])] = 0
             toconv = self.chargedef(noxy, ncat)
             charge["Fe2O3"] += toconv
             charge["FeO"] = -toconv
@@ -611,7 +627,7 @@ class Oxides(Compo):
             mws = self.props["mass"]
             mws["FeO"] = formula("FeO").mass
         elif "Fe2O3" in self.names:
-            charge["Fe2O3"].loc[pd.isna(self.df["Fe2O3"])] = 0
+            charge["Fe2O3"].loc[pd.isna(self.valid["Fe2O3"])] = 0
             toconv = self.chargedef(noxy, ncat).clip(lower=0, upper=charge["FeO"])
             charge["Fe2O3"] += toconv
             charge["FeO"] = charge["FeO"] - toconv
@@ -649,7 +665,7 @@ class Oxides(Compo):
         """
         assert self.units == "wt%", "Oxides must be weight percents"
         if ("P2O5" in self.names) and ("CaO" in self.names):
-            df = self.molprop().normalize(to=1).df
+            df = self.molprop().normalize(to=1).valid
             df["CaO"] = (df["CaO"] - (10 / 3) * df["P2O5"]).clip(lower=0)
             df = df.drop(columns="P2O5")
             mws = self.props["mass"].drop(labels="P2O5")
@@ -685,7 +701,7 @@ class Oxides(Compo):
 
     def table(self, add_total=True, transpose=True):
         # helper for exports
-        df = self.df
+        df = self.valid
         if add_total:
             df["Total"] = self.sum
         if transpose:
@@ -751,7 +767,7 @@ class Oxides(Compo):
         }
         assert system in bulk, "Not valid system"
 
-        df = self.convert_Fe().apatite_correction().df
+        df = self.convert_Fe().apatite_correction().valid
         # Water
         if "H2O" in bulk[system]:
             if "H2O" not in df:
@@ -762,7 +778,7 @@ class Oxides(Compo):
                     H2O = H2O * df.sum(axis=1) / (100 - H2O)
                 df["H2O"] = H2O
         use = df.columns.intersection(bulk[system])
-        df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
+        df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).valid
         if "O" in bulk[system]:
             df["O"] = oxygen
         # add missing
@@ -841,7 +857,7 @@ class Oxides(Compo):
         }
         assert system in bulk, "Not valid system"
 
-        df = self.convert_Fe().apatite_correction().df
+        df = self.convert_Fe().apatite_correction().valid
         # Water
         if "H2O" in bulk[system]:
             if "H2O" not in df:
@@ -852,7 +868,7 @@ class Oxides(Compo):
                     H2O = H2O * df.sum(axis=1) / (100 - H2O)
                 df["H2O"] = H2O
         use = df.columns.intersection(bulk[system])
-        df = Oxides(df[use]).molprop().normalize(to=100 - 2 * oxygen).df
+        df = Oxides(df[use]).molprop().normalize(to=100 - 2 * oxygen).valid
         if "O2" in bulk[system]:
             df["O2"] = 2 * oxygen
         # add missing
@@ -945,7 +961,7 @@ class Oxides(Compo):
         }
         assert db in bulk, "Not valid database"
 
-        df = self.convert_Fe().apatite_correction().df
+        df = self.convert_Fe().apatite_correction().valid
         # Water
         if "H2O" in bulk[db]:
             if "H2O" not in df:
@@ -957,9 +973,9 @@ class Oxides(Compo):
                 df["H2O"] = H2O
         use = df.columns.intersection(bulk[db])
         if sys_in == "mol":
-            df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).df
+            df = Oxides(df[use]).molprop().normalize(to=100 - oxygen).valid
         else:
-            df = Oxides(df[use]).normalize(to=100 - oxygen).df
+            df = Oxides(df[use]).normalize(to=100 - oxygen).valid
         if "O" in bulk[db]:
             df["O"] = oxygen
         # add missing
@@ -1120,19 +1136,21 @@ class Ions(Compo):
         return "\n".join(
             [
                 f"Ions: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.round(decimals=self.decimals)}",
+                f"{self.valid.round(decimals=self.decimals)}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.style.set_caption(f"Ions: {self.name} [{self.units}] - {self.desc}")
+            self.valid.style.set_caption(
+                f"Ions: {self.name} [{self.units}] - {self.desc}"
+            )
             .format(precision=self.decimals)
             .to_html()
         )
 
     def table(self, add_total=True, transpose=True):
-        df = self.df
+        df = self.valid
         if add_total:
             df["Total"] = self.sum
         if transpose:
@@ -1188,13 +1206,13 @@ class APFU(Ions):
         return "\n".join(
             [
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}",
-                f"{self.df.round(decimals=self.decimals)}",
+                f"{self.valid.round(decimals=self.decimals)}",
             ]
         )
 
     def _repr_html_(self):
         return (
-            self.df.style.set_caption(
+            self.valid.style.set_caption(
                 f"APFU[{self.mineral}]: {self.name} [{self.units}] - {self.desc}"
             )
             .format(precision=self.decimals)
@@ -1219,9 +1237,9 @@ class APFU(Ions):
         """
         if self.mineral.has_endmembers:
             res = []
-            for ix, row in self.df.iterrows():
+            for ix, row in self.valid.iterrows():
                 res.append(self.mineral.endmembers(row, force=force))
-            return pd.DataFrame(res, index=self.df.index)
+            return pd.DataFrame(res, index=self.valid.index)
         else:
             raise TypeError(f"{self.mineral} has no endmembers method defined")
 
@@ -1234,10 +1252,12 @@ class APFU(Ions):
         """
         if self.mineral.has_structure:
             res = []
-            for ix, row in self.df.iterrows():
+            for ix, row in self.valid.iterrows():
                 res.append(self.mineral.apfu(row, force=force))
             return APFU(
-                pd.DataFrame(res, index=self._data.index),
+                pd.concat(
+                    [pd.DataFrame(res, index=self._data.index), self.others], axis=1
+                ),
                 mineral=self.mineral,
                 name=self.name,
                 desc=self.desc,
@@ -1247,14 +1267,14 @@ class APFU(Ions):
 
     @property
     def reminder(self):
-        return self.df - self.mineral_apfu().df
+        return self.valid - self.mineral_apfu().valid
 
     @property
     def error(self):
         return 100 * abs(self.mineral.ncat - self.sum) / self.sum
 
     def table(self, add_total=True, transpose=True):
-        df = self.df
+        df = self.valid
         if add_total:
             df["Total"] = self.sum
         ox = pd.Series(len(self) * [self.mineral.noxy], index=df.index, name="Oxygen")
