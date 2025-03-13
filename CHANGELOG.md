@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-03-13
+### Fixed
+- read_actlabs fixed
+- df, valid, others properties unified
+- markers added to plot_grt_profile
+
 ## [0.1.0] - 2024-12-15
 ### Changed
 - MAGEMin bulk formatting added

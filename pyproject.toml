@@ -1,6 +1,6 @@
 [project]
 name = "epmatools"
-version = "0.1.0"
+version = "0.2.0"
 description = "Tools to manipulate EPMA analyses"
 readme = "README.md"
 maintainers = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
@@ -36,10 +36,7 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
-dev = [
-    "epmatools[extra,tests,docs]",
-    "black",
-]
+dev = ["epmatools[extra,tests,docs]", "black"]
 
 
 [build-system]
@@ -48,7 +45,6 @@ build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88
-extend-exclude = '''.*ui_.*'''
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "notebooks"]
