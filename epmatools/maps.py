@@ -390,8 +390,8 @@ class Mapset:
 
     @property
     def element_maps(self):
-        all_elements = set([el.symbol for el in periodictable.elements][1:])
-        return list(all_elements.intersection(self.maps))
+        all_elements = [el.symbol for el in periodictable.elements]
+        return [el for el in self.maps if el in all_elements]
 
     @property
     def total_counts(self):
@@ -766,6 +766,8 @@ class Mapset:
             n_kmeans (int): Number of clusters to be created. Default 256
             ignore (list): List of elements to be ignored for KMeans
                 clustering. Default []
+            only_elements (bool): Use only elemental maps. Defaut True
+            use_total (bool): add sum to feature. Defaut False
             zscore (bool): Transform values to zscore before clustering.
                 Default False
             log1p (bool): Logarithmic transform of values before clustering.
@@ -776,8 +778,14 @@ class Mapset:
         """
         n_kmeans = kwargs.get("n_kmeans", 256)
         ignore = kwargs.get("ignore", [])
-        use = list(set(self.element_maps) - set(ignore))
-        dt = pd.DataFrame(np.array([self.values(el) for el in use]).T, columns=use)
+        if kwargs.get("only_elements", True):
+            dt = pd.DataFrame(
+                {el: self.values(el) for el in self.element_maps if el not in ignore}
+            )
+        else:
+            dt = self.df
+        if kwargs.get("use_total", False):
+            dt["Total"] = dt.sum(axis=1)
         if kwargs.get("zscore", False):
             dt = dt.apply(stats.zscore)
         if kwargs.get("log1p", False):
@@ -1004,7 +1012,7 @@ class Mapset:
         ax.imshow(RGBA)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-        ax.set_title("Phase map")
+        ax.set_title(f"Phase map - {self.name}")
         ax.format_coord = format_coord
         # create a patch (proxy artist) for every color
         patches = self.legend.get_patches(self.img, self.mask)
