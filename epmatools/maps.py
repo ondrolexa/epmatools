@@ -871,7 +871,7 @@ class Mapset:
             mask = np.invert(mask)
         return mask
 
-    def label_info(self, sorted=False):
+    def label_info(self, sorted=False, normalized=True):
         """Returns averaged values for each class of Agglomerative clustering
         as Pandas DataFrame.
 
@@ -880,26 +880,26 @@ class Mapset:
 
         Args:
             sorted (bool): Whether to sort according to class proportion
+            normalized(bool): Whether to normalize the sum to 100
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters() method."
-        df = self.label_df
-        dfg = df.groupby("Label")
-        mn = dfg.mean()
-        elements = self.element_df.columns
-        res = pd.concat(
-            (100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0), mn["Counts"]),
-            axis=1,
-        )
-        res["Prop"] = 100 * dfg.size() / np.count_nonzero(~self.mask)
+        agg = {e: "mean" for e in self.element_maps}
+        g = self.label_df.groupby("Label")
+        res = g.agg(agg)
+        if normalized:
+            res = 100 * res.divide(res.sum(axis=1), axis=0)
+        res.loc[:, "Counts"] = g.agg({"Counts": "sum"})
+        res.loc[:, "Prop"] = 100 * res["Counts"] / res["Counts"].sum()
+        res.loc[:, "Phase"] = ""
         for label, leg in self.legend.store.items():
             for v in leg["values"]:
                 res.loc[v, "Phase"] = label
         if sorted:
             return res.sort_values("Prop", ascending=False).dropna(
-                how="all", subset=elements
+                how="all", subset=self.element_maps
             )
         else:
-            return res.dropna(how="all", subset=elements)
+            return res.dropna(how="all", subset=self.element_maps)
 
     def get_phase_mask(self, phase, invert=False):
         """Get mask corresponding to given phase from legend.
@@ -958,10 +958,10 @@ class Mapset:
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters method."
 
-        def format_coord(x, y):
+        def format_coord(x, y) -> str:
             col = round(x)
             row = round(y)
-            nrows, ncols, _ = self.shape
+            nrows, ncols = self.shape
             if 0 <= col < ncols and 0 <= row < nrows:
                 if transpose:
                     if self.mask.T[row, col]:
@@ -988,6 +988,8 @@ class Mapset:
                             ]
                         )
                 return f"Class: {clabel} {compo}"
+            else:
+                return "error"
 
         figsize = kwargs.get("figsize", (8, 6))
         transpose = kwargs.get("transpose", self.transpose)
