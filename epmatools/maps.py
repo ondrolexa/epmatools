@@ -863,22 +863,6 @@ class Mapset:
         df["Counts"] = self.total_counts[mask].flatten().astype(int)
         return df
 
-    def get_label_mask(self, *args, invert=False):
-        """Get mask corresponding to given class(es) from Agglomerative clustering.
-
-        Args:
-            value (int): Any number of classes to be used for mask
-            invert (bool): Invert mask. Default False
-
-        """
-        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
-        mask = np.full(self.img.shape, False)
-        for v in args:
-            mask = np.logical_or(mask, self.img == v)
-        if invert:
-            mask = np.invert(mask)
-        return mask
-
     def label_info(self, sorted=False, normalized=True):
         """Returns averaged values for each class of Agglomerative clustering
         as Pandas DataFrame.
@@ -908,20 +892,6 @@ class Mapset:
             )
         else:
             return res.dropna(how="all", subset=self.element_maps)
-
-    def get_phase_mask(self, phase, invert=False):
-        """Get mask corresponding to given phase from legend.
-
-        Args:
-            phase (str): Name of phase. Must be in legend
-            invert (bool): Invert mask. Default False
-
-        """
-        assert phase in self.legend.store, f"Phase {phase} not found in legend."
-        mask = self.get_label_mask(*self.legend.store[phase]["values"])
-        if invert:
-            mask = np.invert(mask)
-        return mask
 
     def phase_info(self, sorted=False, **kwargs):
         """Returns averaged values for each phase from legend as Pandas DataFrame.
@@ -954,6 +924,36 @@ class Mapset:
                 return res
         else:
             print("The legend has no entry. Use MapLegend.add method...")
+
+    def get_label_mask(self, *args, invert=False):
+        """Get mask corresponding to given class(es) from Agglomerative clustering.
+
+        Args:
+            value (int): Any number of classes to be used for mask
+            invert (bool): Invert mask. Default False
+
+        """
+        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
+        mask = np.full(self.img.shape, False)
+        for v in args:
+            mask = np.logical_or(mask, self.img == v)
+        if invert:
+            mask = np.invert(mask)
+        return mask
+
+    def get_phase_mask(self, phase, invert=False):
+        """Get mask corresponding to given phase from legend.
+
+        Args:
+            phase (str): Name of phase. Must be in legend
+            invert (bool): Invert mask. Default False
+
+        """
+        assert phase in self.legend.store, f"Phase {phase} not found in legend."
+        mask = self.get_label_mask(*self.legend.store[phase]["values"])
+        if invert:
+            mask = np.invert(mask)
+        return mask
 
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
@@ -1047,7 +1047,6 @@ class MapLegend:
 
     def __init__(self, **kwargs):
         self.n_clusters = kwargs.get("n_clusters", 16)
-        self.norm = colors.Normalize(vmin=0, vmax=self.n_clusters - 1)
         cmap = kwargs.get("cmap", "nipy_spectral")
         if cmap in plt.colormaps():
             self.__cmap = cmap
@@ -1082,7 +1081,8 @@ class MapLegend:
         Args:
             value (int): class number
         """
-        color = colors.to_rgb(self.cmap(self.norm(value)))
+        norm = colors.Normalize(vmin=0, vmax=self.n_clusters - 1)
+        color = colors.to_rgb(self.cmap(norm(value)))
         for v in self.store.values():
             if value in v["values"]:
                 color = colors.to_rgb(v["color"])
@@ -1116,6 +1116,16 @@ class MapLegend:
         if not isinstance(values, tuple):
             raise ValueError("values must be int or list/tuple of ints")
         self.store[phase] = dict(color=color, values=values)
+
+    def remove(self, phase):
+        """Remove phase from the legend
+
+        Args:
+            phase (str): Name of phase
+        """
+        assert isinstance(phase, str), "phase must be string"
+        if phase in self.store:
+            del self.store[phase]
 
     @property
     def unlabeled(self):
