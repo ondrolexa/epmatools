@@ -12,9 +12,9 @@ from matplotlib.widgets import PolygonSelector, RectangleSelector
 import matplotlib.patches as mpatches
 import pandas as pd
 
-# import seaborn as sns
 import h5py
 from scipy import stats
+from scipy.cluster import hierarchy
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.preprocessing import FunctionTransformer
 
@@ -277,8 +277,6 @@ class Mapset:
         element_maps (list): List of all elemental maps in sample.
         total_counts (nump.ndarray): 2d array of total elemental count. It is
             sum of all elemental maps.
-        label_df (pandas.DataFrame): All values from maps aranged in pandas
-            DataFrame with values of classes from Agglomerative clustering.
         shape (tuple): (rows, cols) tuple of maps shape.
         name (str, optional): Name of the sample.
         aspect (float): Aspect of the axis scaling, i.e. the ratio of y-unit to
@@ -403,7 +401,7 @@ class Mapset:
     def get_map(self, expr=None):
         """Returns map as 2D numpy.ndarray with np.nan as masked values.
 
-        Args:
+        Keyword Args:
             expr (str, optional): Name of the map or expression using names
                 of the map, e.g. 'Si', 'Fe/(Fe+Mg)', 'Na+Ca+K'. If None, the
                 total counts are used.
@@ -467,6 +465,8 @@ class Mapset:
         Args:
             name (str): Name of the mask
             mask (numpy.ndarray): 2D boolean numpy array
+
+        Keyword Args:
             activate (bool): Whether the mask should be set as active. Default
                 is True
 
@@ -500,6 +500,8 @@ class Mapset:
 
         Args:
             name (str): Name of the mask
+
+        Keyword Args:
             expr (str, optional): Name of the map or expression using names
                 of the map, e.g. 'Si', 'Fe/(Fe+Mg)', 'Na+Ca+K'. If None, the
                 total counts are used.
@@ -564,7 +566,7 @@ class Mapset:
 
         Note: All existing masks are also clipped
 
-        Args:
+        Keyword Args:
             rmin (int): Minimum row to be clipped. Default 0.
             rmax (int): Maximum row to be clipped. Default is max.
             cmin (int): Minimum column to be clipped. Default 0.
@@ -611,6 +613,8 @@ class Mapset:
             expr (str, optional): Name of the map or expression using names
                 of the map, e.g. 'Si', 'Fe/(Fe+Mg)', 'Na+Ca+K'. If None, the
                 total counts are used.
+
+        Keyword Args:
             colorbar (bool): Wheter to show colorbar. Default True.
             vmin: Minimum value mapped to lowest color in colormap. Default
                 value is calculated according to cdfclip setting.
@@ -709,6 +713,8 @@ class Mapset:
             expr (str, optional): Name of the map or expression using names
                 of the map, e.g. 'Si', 'Fe/(Fe+Mg)', 'Na+Ca+K'. If None, the
                 total counts are used.
+
+        Keyword Args:
             vmin: Minimum value used for KDE. Default value is calculated
                 according to cdfclip setting.
             vmax: Maximum value used for KDE. Default value is calculated
@@ -762,7 +768,7 @@ class Mapset:
         Note: KMeans are used for subsequent Agglomerative clustering
             to create phase map.
 
-        Args:
+        Keyword Args:
             n_kmeans (int): Number of clusters to be created. Default 256
             ignore (list): List of elements to be ignored for KMeans
                 clustering. Default []
@@ -803,7 +809,7 @@ class Mapset:
     def aggclusters(self, **kwargs):
         """Agglomerative clustering of KMeans.
 
-        Args:
+        Keyword Args:
             n_clusters (int): Number of classes to be created. Default is
                 n_clusters defined in Mapset.legend
 
@@ -819,7 +825,9 @@ class Mapset:
 
         n_clusters = kwargs.get("n_clusters", self.legend.n_clusters)
         hierarchical_cluster = AgglomerativeClustering(
-            n_clusters=n_clusters, metric="euclidean", linkage="ward"
+            n_clusters=n_clusters,
+            metric="euclidean",
+            linkage="ward",
         )
         self.labels = hierarchical_cluster.fit_predict(self.centers)
         agg = self.clusters.copy()
@@ -831,20 +839,28 @@ class Mapset:
         if n_clusters != self.legend.n_clusters:
             self.legend = MapLegend(**kwargs)
 
-    @property
-    def label_df(self):
+    def label_df(self, counts=False):
+        """Return averaged values for each label of Agglomerative clustering
+
+        Keyword Args:
+            counts (bool): If True, Counts column is added. Default False
+
+        """
         assert self.labels is not None, "Not aggregated. Use aggclusters() method."
         df = self.element_df.copy()
         df["Label"] = self.labels[self.clusters]
-        df["Counts"] = self.values().astype(int)
+        if counts:
+            df["Counts"] = self.values().astype(int)
         return df
 
-    def phase_df(self, phase):
-        """Return averaged values for each class of Agglomerative clustering of
-        given phase as pandas DataFrame.
+    def phase_df(self, phase, counts=False):
+        """Return averaged values for each phase in legend as pandas DataFrame.
 
         Args:
             phase (str): Name of phase to be retrieved.
+
+        Keyword Args:
+            counts (bool): If True, Counts column is added. Default False
 
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters() method."
@@ -860,66 +876,77 @@ class Mapset:
             columns=elements,
         )
         df["Class"] = self.img[mask].flatten().astype(int)
-        df["Counts"] = self.total_counts[mask].flatten().astype(int)
+        if counts:
+            df["Counts"] = self.total_counts[mask].flatten().astype(int)
         return df
 
-    def label_info(self, sorted=False, normalized=True):
+    def label_info(self, **kwargs):
         """Returns averaged values for each class of Agglomerative clustering
         as Pandas DataFrame.
 
         Note: When particular class has legend label, the name of the phase is
         added to result.
 
-        Args:
-            sorted (bool): Whether to sort according to class proportion
-            normalized(bool): Whether to normalize the sum to 100
+        Keyword Args:
+            sorted (bool): Whether to sort according to class proportion. Default False
+            normalized(bool): Whether to normalize the sum to 100. Default False
+            counts (bool): Include total counts. Deafult True
+            prop (bool): include class proportion. Deafult True
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters() method."
         agg = {e: "mean" for e in self.element_maps}
-        g = self.label_df.groupby("Label")
+        g = self.label_df(counts=True).groupby("Label")
         res = g.agg(agg)
-        if normalized:
+        n = g.size()
+        if kwargs.get("normalized", False):
             res = 100 * res.divide(res.sum(axis=1), axis=0)
-        res.loc[:, "Counts"] = g.agg({"Counts": "sum"})
-        res.loc[:, "Prop"] = 100 * res["Counts"] / res["Counts"].sum()
-        res.loc[:, "Phase"] = ""
-        for label, leg in self.legend.store.items():
-            for v in leg["values"]:
-                res.loc[v, "Phase"] = label
-        if sorted:
-            return res.sort_values("Prop", ascending=False).dropna(
-                how="all", subset=self.element_maps
-            )
+        if kwargs.get("counts", True):
+            res.loc[:, "Counts"] = g.agg({"Counts": "mean"})
+        if kwargs.get("prop", True):
+            res.loc[:, "Prop"] = 100 * n / n.sum()
+        if kwargs.get("phase", True):
+            res.loc[:, "Phase"] = ""
+            for label, leg in self.legend.store.items():
+                for v in leg["values"]:
+                    res.loc[v, "Phase"] = label
+        if kwargs.get("sorted", False):
+            idx = n.sort_values(ascending=False).index
+            return res.loc[idx].dropna(how="all", subset=self.element_maps)
         else:
             return res.dropna(how="all", subset=self.element_maps)
 
     def phase_info(self, sorted=False, **kwargs):
         """Returns averaged values for each phase from legend as Pandas DataFrame.
 
-        Args:
-            sorted (bool): Whether to sort according to phase proportion
+        Keyword Args:
+            sorted (bool): Whether to sort according to phase proportion. . Default False
+            normalized(bool): Whether to normalize the sum to 100. Default False
+            counts (bool): Include total counts. Deafult True
+            prop (bool): include phase proportion. Deafult True
         """
         assert self.labels is not None, "Not aggregated. Use aggclusters method."
         dfs = []
         if self.legend.store:
             for phase in self.legend.store:
-                df = self.phase_df(phase)
+                df = self.phase_df(phase, counts=True)
                 df["Phase"] = phase
                 dfs.append(df)
             df = pd.concat(dfs)
             dfg = df.groupby("Phase")
+            n = dfg.size()
             mn = dfg.mean()
             elements = self.element_df.columns
-            res = pd.concat(
-                (
-                    100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0),
-                    mn["Counts"],
-                ),
-                axis=1,
-            )
-            res["Prop"] = 100 * dfg.size() / np.count_nonzero(~self.mask)
+            if kwargs.get("normalized", False):
+                res = 100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0)
+            else:
+                res = mn[elements]
+            if kwargs.get("counts", True):
+                res.loc[:, "Counts"] = mn["Counts"]
+            if kwargs.get("prop", True):
+                res.loc[:, "Prop"] = 100 * n / n.sum()
             if sorted:
-                return res.sort_values("Prop", ascending=False)
+                idx = n.sort_values(ascending=False).index
+                return res.loc[idx]
             else:
                 return res
         else:
@@ -929,7 +956,9 @@ class Mapset:
         """Get mask corresponding to given class(es) from Agglomerative clustering.
 
         Args:
-            value (int): Any number of classes to be used for mask
+            value (int): Any number(s) of classes to be used for mask
+
+        Keyword Args:
             invert (bool): Invert mask. Default False
 
         """
@@ -946,6 +975,8 @@ class Mapset:
 
         Args:
             phase (str): Name of phase. Must be in legend
+
+        Keyword Args:
             invert (bool): Invert mask. Default False
 
         """
@@ -955,10 +986,67 @@ class Mapset:
             mask = np.invert(mask)
         return mask
 
+    def dendrogram(self, **kwargs):
+        """Show dendrogram of agglomerative clusters
+
+        Keyword Args:
+            zscore (bool): Transform values to zscore before clustering.
+                Default False
+            log1p (bool): Logarithmic transform of values before clustering.
+                Default False
+            metric (str): Default `euclidean`
+            method (str): Default `ward`
+
+        """
+        dt = self.label_info(prop=False, phase=False)
+        if kwargs.get("zscore", False):
+            dt = dt.apply(stats.zscore)
+        if kwargs.get("log1p", False):
+            tr = FunctionTransformer(
+                np.log1p, validate=True, feature_names_out="one-to-one"
+            ).fit(dt)
+            dt = pd.DataFrame(tr.transform(dt), columns=tr.get_feature_names_out())
+
+        Z = hierarchy.linkage(
+            dt,
+            metric=kwargs.get("metric", "euclidean"),
+            method=kwargs.get("method", "ward"),
+        )
+        if kwargs.get("calc_linkage", False):
+            return Z
+        else:
+            hierarchy.dendrogram(Z, labels=list(dt.index))
+            plt.show()
+
+    def autolegend(self, n_phases, **kwargs):
+        """Create given number of phases from dendrogram
+
+        Args:
+            n_phases (int): Number of phases to create
+        Keyword Args:
+            cmap (str): Color map used for auto color mapping. Default 'nipy_spectral'
+            zscore (bool): Transform values to zscore before clustering.
+                Default False
+            log1p (bool): Logarithmic transform of values before clustering.
+                Default False
+            metric (str): Default `euclidean`
+            method (str): Default `ward`
+
+        """
+        if "n_clusters" not in kwargs:
+            kwargs["n_clusters"] = len(np.unique(self.labels))
+        Z = self.dendrogram(calc_linkage=True, **kwargs)
+        pix = hierarchy.cut_tree(Z, n_clusters=n_phases)[:, 0]
+        self.legend = MapLegend(**kwargs)
+        norm = colors.Normalize(vmin=0, vmax=n_phases - 1)
+        for ix in range(n_phases):
+            vals = [v.item() for v in np.where(pix == ix)[0]]
+            self.legend.add(f"P{ix}", colors.to_rgb(self.legend.cmap(norm(ix))), vals)
+
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
 
-        Args:
+        Keyword Args:
             figsize (tuple): Figure size. Default is Mapset.figsize
             transpose (bool): Whether to transpose the map. Default is Mapset.transpose
             filename (str): If provided, the figure is saved to file. Default None.
@@ -991,8 +1079,8 @@ class Mapset:
                         clabel = int(self.img[row, col])
                         compo = " ".join(
                             [
-                                f"{el}: {self[el][row, col]}"
-                                for el in self.element_df.columns
+                                f"{el}:{self[el][row, col]:.0f}"
+                                for el in self.df.columns  # self.element_df.columns
                             ]
                         )
                 return f"Class: {clabel} {compo}"
@@ -1126,6 +1214,24 @@ class MapLegend:
         assert isinstance(phase, str), "phase must be string"
         if phase in self.store:
             del self.store[phase]
+
+    def rename(self, old, new):
+        """Rename phase to the new name
+
+        Args:
+            old (str): Name of phase
+            new (str): Name of phase
+        """
+        assert isinstance(old, str), "old phase must be string"
+        assert isinstance(new, str), "new phase must be string"
+        if old in self.store:
+            if new in self.store:
+                self.store[new]["values"] = (
+                    self.store[new]["values"] + self.store[old]["values"]
+                )
+            else:
+                self.store[new] = self.store[old]
+            del self.store[old]
 
     @property
     def unlabeled(self):
