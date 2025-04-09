@@ -1043,11 +1043,16 @@ class Mapset:
             vals = [v.item() for v in np.where(pix == ix)[0]]
             self.legend.add(f"P{ix}", colors.to_rgb(self.legend.cmap(norm(ix))), vals)
 
+    def clear_legend(self):
+        """Clear legend"""
+        self.legend = MapLegend()
+
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
 
         Keyword Args:
             figsize (tuple): Figure size. Default is Mapset.figsize
+            legend (bool): Whether to show phase legend
             transpose (bool): Whether to transpose the map. Default is Mapset.transpose
             filename (str): If provided, the figure is saved to file. Default None.
 
@@ -1102,16 +1107,17 @@ class Mapset:
         ax.get_yaxis().set_visible(False)
         ax.set_title(f"Phase map - {self.name}")
         ax.format_coord = format_coord
-        # create a patch (proxy artist) for every color
-        patches = self.legend.get_patches(self.img, self.mask)
-        if patches:
-            ax.legend(
-                handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0
-            )
+        if kwargs.get("legend", True):
+            # create a patch (proxy artist) for every color
+            patches = self.legend.get_patches(self.img, self.mask)
+            if patches:
+                ax.legend(
+                    handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0
+                )
         filename = kwargs.get("filename", None)
         f.tight_layout()
         if filename is not None:
-            f.savefig(filename, dpi=300)
+            f.savefig(filename, dpi=300, bbox_inches="tight", pad_inches=0)
         plt.show()
 
 
