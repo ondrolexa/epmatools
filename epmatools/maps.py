@@ -315,6 +315,7 @@ class Mapset:
         self.default_cmap = kwargs.get("cmap", "inferno")
         self.figsize = kwargs.get("figsize", (8, 6))
         self.transpose = kwargs.get("transpose", False)
+        self.reset_default_mask()
         if self.clusters is not None:
             self.aggclusters()
 
@@ -434,16 +435,20 @@ class Mapset:
     @property
     def mask(self):
         if self.active_mask is None:
-            return np.full(self.shape, False)
+            return np.logical_or(self.default_mask, np.full(self.shape, False))
         else:
-            return self.__masks[self.active_mask]
+            return np.logical_or(self.default_mask, self.__masks[self.active_mask])
 
     @property
     def masks(self):
         return list(self.__masks.keys())
 
-    def clear_mask(self):
-        """Remove active mask."""
+    def reset_default_mask(self):
+        """Reset default mask."""
+        self.default_mask = np.full(self.shape, False)
+
+    def deactivate_mask(self):
+        """Deactivate active mask."""
         self.active_mask = None
 
     def get_mask(self, name):
@@ -459,6 +464,18 @@ class Mapset:
             print(f"Mask {name} not exists in sample")
             print(f"Available masks: {self.masks}")
 
+    def invert_mask(self):
+        """Invert active mask.
+
+        Args:
+            name (str): Name of the mask
+
+        """
+        if self.active_mask is not None:
+            self.__masks[self.active_mask] = ~self.__masks[self.active_mask]
+        else:
+            print("No active mask")
+
     def add_mask(self, name, mask, **kwargs):
         """Add mask to sample masks
 
@@ -469,6 +486,7 @@ class Mapset:
         Keyword Args:
             activate (bool): Whether the mask should be set as active. Default
                 is True
+            overwrite (bool): Allow overwrite existing mask. Default False
 
         """
         assert mask.dtype == bool, "Mask must be boolean array"
@@ -679,19 +697,25 @@ class Mapset:
         ax.set_aspect(self.aspect)
         dt_masked = np.ma.masked_where(self.mask | np.isnan(dt) | np.isinf(dt), dt)
         if background is not None:
-            mm = self.active_mask
-            self.clear_mask()
+            self.invert_mask()
             bg = self.get_map(background)
-            self.active_mask = mm
+            bg_masked = np.ma.masked_where(self.mask | np.isnan(bg) | np.isinf(bg), bg)
+            self.invert_mask()
             vmin = np.nanpercentile(bg, bgcdfclip[0])
             vmax = np.nanpercentile(bg, bgcdfclip[1])
             bgnorm = colors.Normalize(vmin=vmin, vmax=vmax)
-            bgcmap = kwargs.get("background_cmap", "grey")
+            bgcmap = plt.get_cmap(kwargs.get("background_cmap", "grey"))
+            bgcmap.set_under(kwargs.get("bgunder", bgcmap(0.0)))
+            bgcmap.set_over(kwargs.get("bgover", bgcmap(1.0)))
+            if "bgmasked" in kwargs:
+                bgcmap.set_bad(kwargs.get("bgmasked"))
+            else:
+                bgcmap.set_bad(alpha=0)
             if transpose:
-                ax.imshow(bg.T, cmap=bgcmap, norm=bgnorm)
+                ax.imshow(bg_masked.T, cmap=bgcmap, norm=bgnorm)
                 img = ax.imshow(dt_masked.T, cmap=cmap, norm=norm)
             else:
-                ax.imshow(bg, cmap=bgcmap, norm=bgnorm)
+                ax.imshow(bg_masked, cmap=bgcmap, norm=bgnorm)
                 img = ax.imshow(dt_masked, cmap=cmap, norm=norm)
         else:
             if transpose:
