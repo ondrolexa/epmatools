@@ -410,7 +410,7 @@ class Mapset:
         if expr in self:
             dt = self[expr]
             dt[self.mask] = np.nan
-        elif expr is None:
+        elif (expr is None) or (expr == ""):
             dt = self.total_counts
             dt[self.mask] = np.nan
         else:
@@ -629,6 +629,8 @@ class Mapset:
                 highest color of active colormap.
             zscore (bool): Whether to transform values to z-score. Default False.
             log (bool): Whether to use logarithmic mapping to color map. Default False.
+            background (str): map show as background in masked region. Default None
+            background_cmap (str): Name of matplotlib colormap. Default is 'grey'
             title (str): Figure title. Default is the expr.
             figsize (tuple): Figure size. Default is Mapset.figsize
             transpose (bool): Whether to transpose the map. Default is Mapset.transpose
@@ -649,8 +651,13 @@ class Mapset:
         cmap = plt.get_cmap(kwargs.get("cmap", self.default_cmap))
         cmap.set_under(kwargs.get("under", cmap(0.0)))
         cmap.set_over(kwargs.get("over", cmap(1.0)))
-        cmap.set_bad(kwargs.get("masked", "white"))
+        if "masked" in kwargs:
+            cmap.set_bad(kwargs.get("masked"))
+        else:
+            cmap.set_bad(alpha=0)
+        background = kwargs.get("background", None)
         cdfclip = kwargs.get("cdfclip", (2, 98))
+        bgcdfclip = kwargs.get("bgcdfclip", (2, 98))
         title = kwargs.get("title", "Total element counts" if expr is None else expr)
         if self.active_mask is not None:
             title += f" [{self.active_mask}]"
@@ -671,10 +678,26 @@ class Mapset:
         f, ax = plt.subplots(figsize=figsize)
         ax.set_aspect(self.aspect)
         dt_masked = np.ma.masked_where(self.mask | np.isnan(dt) | np.isinf(dt), dt)
-        if transpose:
-            img = ax.imshow(dt_masked.T, cmap=cmap, norm=norm)
+        if background is not None:
+            mm = self.active_mask
+            self.clear_mask()
+            bg = self.get_map(background)
+            self.active_mask = mm
+            vmin = np.nanpercentile(bg, bgcdfclip[0])
+            vmax = np.nanpercentile(bg, bgcdfclip[1])
+            bgnorm = colors.Normalize(vmin=vmin, vmax=vmax)
+            bgcmap = kwargs.get("background_cmap", "grey")
+            if transpose:
+                ax.imshow(bg.T, cmap=bgcmap, norm=bgnorm)
+                img = ax.imshow(dt_masked.T, cmap=cmap, norm=norm)
+            else:
+                ax.imshow(bg, cmap=bgcmap, norm=bgnorm)
+                img = ax.imshow(dt_masked, cmap=cmap, norm=norm)
         else:
-            img = ax.imshow(dt_masked, cmap=cmap, norm=norm)
+            if transpose:
+                img = ax.imshow(dt_masked.T, cmap=cmap, norm=norm)
+            else:
+                img = ax.imshow(dt_masked, cmap=cmap, norm=norm)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         if title is not None:
@@ -778,12 +801,15 @@ class Mapset:
                 Default False
             log1p (bool): Logarithmic transform of values before clustering.
                 Default False
+            random_state (int): Determines random number generation for
+                centroid initialization. Default None.
 
         Additional keyword arguments are passed to aggclusters() method.
 
         """
         n_kmeans = kwargs.get("n_kmeans", 256)
         ignore = kwargs.get("ignore", [])
+        random_state = kwargs.get("random_state", None)
         if kwargs.get("only_elements", True):
             dt = pd.DataFrame(
                 {el: self.values(el) for el in self.element_maps if el not in ignore}
@@ -799,7 +825,12 @@ class Mapset:
                 np.log1p, validate=True, feature_names_out="one-to-one"
             ).fit(dt)
             dt = pd.DataFrame(tr.transform(dt), columns=tr.get_feature_names_out())
-        kmeans = KMeans(n_clusters=n_kmeans, init="k-means++", n_init="auto")
+        kmeans = KMeans(
+            n_clusters=n_kmeans,
+            init="k-means++",
+            n_init="auto",
+            random_state=random_state,
+        )
         print("Clustering, please wait...")
         self.clusters = kmeans.fit_predict(dt)
         self.centers = kmeans.cluster_centers_
