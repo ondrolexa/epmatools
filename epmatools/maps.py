@@ -476,6 +476,42 @@ class Mapset:
         else:
             print("No active mask")
 
+    def modify_mask_add(self, name):
+        """Modify active mask as logical_and with nask name
+
+        Args:
+            name (str): Name of the mask
+
+        """
+        mask2 = self.get_mask(name)
+        self.__masks[self.active_mask] = np.logical_and(
+            self.__masks[self.active_mask], mask2
+        )
+
+    def modify_mask_or(self, name):
+        """Modify active mask as logical_or with nask name
+
+        Args:
+            name (str): Name of the mask
+
+        """
+        mask2 = self.get_mask(name)
+        self.__masks[self.active_mask] = np.logical_or(
+            self.__masks[self.active_mask], mask2
+        )
+
+    def modify_mask_xor(self, name):
+        """Modify active mask as logical_xor with nask name
+
+        Args:
+            name (str): Name of the mask
+
+        """
+        mask2 = self.get_mask(name)
+        self.__masks[self.active_mask] = np.logical_xor(
+            self.__masks[self.active_mask], mask2
+        )
+
     def add_mask(self, name, mask, **kwargs):
         """Add mask to sample masks
 
@@ -994,7 +1030,7 @@ class Mapset:
             if kwargs.get("normalized", False):
                 res = 100 * mn[elements].divide(mn[elements].sum(axis=1), axis=0)
             else:
-                res = mn[elements]
+                res = mn[elements].copy()
             if kwargs.get("counts", True):
                 res.loc[:, "Counts"] = mn["Counts"]
             if kwargs.get("prop", True):
