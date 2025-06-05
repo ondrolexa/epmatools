@@ -477,7 +477,7 @@ class Mapset:
             print("No active mask")
 
     def modify_mask_add(self, name):
-        """Modify active mask as logical_and with nask name
+        """Modify active mask as logical_and with mask name
 
         Args:
             name (str): Name of the mask
@@ -489,7 +489,7 @@ class Mapset:
         )
 
     def modify_mask_or(self, name):
-        """Modify active mask as logical_or with nask name
+        """Modify active mask as logical_or with mask name
 
         Args:
             name (str): Name of the mask
@@ -501,7 +501,7 @@ class Mapset:
         )
 
     def modify_mask_xor(self, name):
-        """Modify active mask as logical_xor with nask name
+        """Modify active mask as logical_xor with mask name
 
         Args:
             name (str): Name of the mask
