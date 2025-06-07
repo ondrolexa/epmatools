@@ -14,6 +14,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "matplotlib",
+    "matplotlib-scalebar",
     "scipy",
     "h5py",
     "pandas",

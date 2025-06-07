@@ -10,6 +10,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.path import Path as mplPath
 from matplotlib.widgets import PolygonSelector, RectangleSelector
 import matplotlib.patches as mpatches
+from matplotlib_scalebar.scalebar import ScaleBar
 import pandas as pd
 
 import h5py
@@ -78,6 +79,8 @@ class MapStore:
                 # attributes
                 aspect = float(samplestore.attrs["aspect"])
                 active_mask = samplestore.attrs["active_mask"]
+                pixelsize = float(samplestore.attrs.get("pixelsize", 1.0))
+                pixelunit = samplestore.attrs.get("pixelunit", "um")
                 if active_mask == "":
                     active_mask = None
                 # data
@@ -111,6 +114,8 @@ class MapStore:
                 clusters=clusters,
                 centers=centers,
                 legend=legend,
+                pixelsize=pixelsize,
+                pixelunit=pixelunit,
             )
         else:
             print(f"Mapset {name} is not in MapStore.")
@@ -137,6 +142,8 @@ class MapStore:
                 samplestore = hf.create_group(sample.name)
                 samplestore.attrs["shape"] = sample.shape
                 samplestore.attrs["aspect"] = sample.aspect
+                samplestore.attrs["pixelsize"] = sample.pixelsize
+                samplestore.attrs["pixelunit"] = sample.pixelunit
                 if sample.active_mask is None:
                     samplestore.attrs["active_mask"] = ""
                 else:
@@ -263,6 +270,8 @@ class Mapset:
         img (numpy.array): 2D array of Agglomerative labels. Defaut is None
         legend (edstool.MapLegend): Legend for phase map. Defaut is None
         default_cmap (str): Name of default matplotlib colormap. Default is 'inferno'.
+        pixelsize (float): Size of pixel in pixelunit. Default is 1.
+        pixelsize (str): Pixel unit e.g. m, cm, um, km. Default is "um".
         figsize (tuple): Default figure size. Default is (8, 6).
         transpose (bool): Whether to show map transposed. Default is False.
 
@@ -314,6 +323,8 @@ class Mapset:
         self.legend = kwargs.get("legend", MapLegend())
         self.default_cmap = kwargs.get("cmap", "inferno")
         self.figsize = kwargs.get("figsize", (8, 6))
+        self.pixelsize = kwargs.get("pixelsize", 1)
+        self.pixelunit = kwargs.get("pixelunit", "um")
         self.transpose = kwargs.get("transpose", False)
         self.reset_default_mask()
         if self.clusters is not None:
@@ -677,6 +688,8 @@ class Mapset:
             cdfclip (tuple): Default colormap mapping of values based on cumulative
                 distribution range. Default is (2, 98)
             cmap (str): Name of matplotlib colormap. Default is 'inferno'
+            scale (bool): Show scalebar when True. Default False
+            sb_kwargs (dict): Scale bar keyword args. Default {}
             under (str): Name of the color used for values below vmin. Default is
                 lowest color of active colormap.
             over (str): Name of the color used for values above vmax. Default is
@@ -760,6 +773,9 @@ class Mapset:
                 img = ax.imshow(dt_masked, cmap=cmap, norm=norm)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+        if kwargs.get("scale", False):
+            sb = ScaleBar(self.pixelsize, self.pixelunit, **kwargs.get("sb_kwargs", {}))
+            ax.add_artist(sb)
         if title is not None:
             ax.set_title(title)
         if colorbar:
@@ -1144,6 +1160,8 @@ class Mapset:
         Keyword Args:
             figsize (tuple): Figure size. Default is Mapset.figsize
             legend (bool): Whether to show phase legend
+            scale (bool): Show scalebar when True. Default False
+            sb_kwargs (dict): Scale bar keyword args. Default {}
             transpose (bool): Whether to transpose the map. Default is Mapset.transpose
             filename (str): If provided, the figure is saved to file. Default None.
 
@@ -1197,6 +1215,9 @@ class Mapset:
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.set_title(f"Phase map - {self.name}")
+        if kwargs.get("scale", False):
+            sb = ScaleBar(self.pixelsize, self.pixelunit, **kwargs.get("sb_kwargs", {}))
+            ax.add_artist(sb)
         ax.format_coord = format_coord
         if kwargs.get("legend", True):
             # create a patch (proxy artist) for every color
