@@ -51,11 +51,10 @@ def from_upsg_eds(src, merged=False, astype=int, name=False):
         merged (bool): Must be True for merged export. Default False
         astype (dtype): dtype of imported maps. Default int is suitable
             for maps with counts, otherwise should be float
-        name (bool): When True, function returns also name of the mapset
-            derived from directory stem
 
     Returns:
         maps (dict): Dictionary of maps (suitable for Mapset)
+        meta (dict): Metadata suitable for Mapset
 
     """
     src = Path(src)
@@ -67,6 +66,7 @@ def from_upsg_eds(src, merged=False, astype=int, name=False):
         df.columns = df.columns.str.strip()
     cnds = [p for p in src.iterdir() if p.suffix == ".cnd"]
     maps = {}
+    mapsmeta = {}
     shape = None
     for ix, cnd in enumerate(cnds):
         meta = {}
@@ -83,6 +83,13 @@ def from_upsg_eds(src, merged=False, astype=int, name=False):
             cols, rows = map(int, meta["XM_AP_SA_PIXELS"])
         else:
             raise ValueError(f"No $XM_AP_SA_PIXELS in {cnd}")
+        if "XM_CP_PROJECT_NAME" in meta:
+            mapsmeta["name"] = meta["XM_CP_PROJECT_NAME"][0]
+        else:
+            mapsmeta["name"] = src.stem
+        if "XM_AP_SA_PIXEL_SIZE" in meta:
+            sx, sy, _ = map(float, meta["XM_AP_SA_PIXEL_SIZE"])
+            mapsmeta["pixelsize"] = (sx + sy) / 2
         if "XM_ELEM_NAME" in meta:
             if meta["XM_ELEM_NAME"] is not None:
                 element = meta["XM_ELEM_NAME"][0]
@@ -114,10 +121,7 @@ def from_upsg_eds(src, merged=False, astype=int, name=False):
                     raise ValueError("Matrix shape do not correspond metafile info")
             maps[element] = values
         print(f"{ix + 1}/{len(cnds)} {element} parsed...")
-    if name:
-        return maps, src.stem
-    else:
-        return maps
+    return maps, mapsmeta
 
 
 def from_line_data_separated(src):
