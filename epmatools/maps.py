@@ -1287,8 +1287,8 @@ class MapLegend:
 
         Args:
             phase (str): Name of phase
-            color (str): Name of matplotlib color
-            values (tuple): tuple of class values corresponding to given phase
+            color (str or tuple): matplotlib named color or RGB tuple
+            values (tuple or int): tuple of class values corresponding to given phase
         """
         assert isinstance(phase, str), "phase must be string"
         assert colors.is_color_like(
@@ -1300,6 +1300,13 @@ class MapLegend:
             values = tuple(values)
         if not isinstance(values, tuple):
             raise ValueError("values must be int or list/tuple of ints")
+        to_replace = []
+        for value in values:
+            for p in self.store:
+                if value in self.store[p]["values"]:
+                    to_replace.append(p)
+        for p in to_replace:
+            self.remove(p)
         self.store[phase] = dict(color=color, values=values)
 
     def remove(self, phase):
@@ -1329,6 +1336,21 @@ class MapLegend:
             else:
                 self.store[new] = self.store[old]
             del self.store[old]
+
+    def set_color(self, phase, color):
+        """Set color for phase
+
+        Args:
+            phase (str): Name of phase
+            color (str or tuple): matplotlib named color or RGB tuple
+
+        """
+        assert isinstance(phase, str), "phase must be string"
+        assert colors.is_color_like(
+            color
+        ), "color must be matplotlib named color or RGB tuple"
+        if phase in self.store:
+            self.store[phase]["color"] = colors.to_rgb(color)
 
     @property
     def unlabeled(self):
