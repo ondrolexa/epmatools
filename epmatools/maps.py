@@ -1230,7 +1230,9 @@ class Mapset:
         f.tight_layout()
         if filename is not None:
             f.savefig(filename, dpi=300, bbox_inches="tight", pad_inches=0)
-        plt.show()
+            plt.close(f)
+        else:
+            plt.show()
 
 
 class MapLegend:
