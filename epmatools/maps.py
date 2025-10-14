@@ -328,7 +328,14 @@ class Mapset:
         self.transpose = kwargs.get("transpose", False)
         self.reset_default_mask()
         if self.clusters is not None:
-            self.aggclusters()
+            try:
+                self.aggclusters()
+            except ValueError:
+                self.__active_mask = None
+                self.aggclusters()
+                if "active_mask" in kwargs:
+                    if kwargs["active_mask"] in self.__masks:
+                        self.__active_mask = kwargs["active_mask"]
 
     def __repr__(self):
         return (
@@ -694,6 +701,8 @@ class Mapset:
                 lowest color of active colormap.
             over (str): Name of the color used for values above vmax. Default is
                 highest color of active colormap.
+            masked (str): if provided, defines masked region color,
+                otherwise transparent.
             zscore (bool): Whether to transform values to z-score. Default False.
             log (bool): Whether to use logarithmic mapping to color map. Default False.
             background (str): map show as background in masked region. Default None
@@ -742,7 +751,11 @@ class Mapset:
             norm = colors.LogNorm(vmin=vmin, vmax=vmax)
         else:
             norm = colors.Normalize(vmin=vmin, vmax=vmax)
-        f, ax = plt.subplots(figsize=figsize)
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+            f = ax.get_figure()
+        else:
+            f, ax = plt.subplots(figsize=figsize)
         ax.set_aspect(self.aspect)
         dt_masked = np.ma.masked_where(self.mask | np.isnan(dt) | np.isinf(dt), dt)
         if background is not None:
@@ -778,10 +791,11 @@ class Mapset:
             ax.add_artist(sb)
         if title is not None:
             ax.set_title(title)
-        if colorbar:
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            f.colorbar(img, cax=cax, extend="both")
+        if "ax" not in kwargs:
+            if colorbar:
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                f.colorbar(img, cax=cax, extend="both")
         filename = kwargs.get("filename", None)
         f.tight_layout()
         if filename is not None:
@@ -793,7 +807,8 @@ class Mapset:
                 rect_selector = RectangleSelector(
                     ax, onselect_function, button=[1], minspanx=1, minspany=1
                 )
-            plt.show()
+            if kwargs.get("show", True):
+                plt.show()
             if kwargs.get("clip", False):
                 if (rect_selector.extents[1] - rect_selector.extents[0] >= 1) & (
                     rect_selector.extents[3] - rect_selector.extents[2] >= 1
