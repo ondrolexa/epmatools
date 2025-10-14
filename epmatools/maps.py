@@ -78,11 +78,10 @@ class MapStore:
                 samplestore = hf.get(name)
                 # attributes
                 aspect = float(samplestore.attrs["aspect"])
-                active_mask = samplestore.attrs["active_mask"]
+                active_mask = samplestore.attrs.get("active_mask", None)
+                cluster_mask = samplestore.attrs.get("cluster_mask", None)
                 pixelsize = float(samplestore.attrs.get("pixelsize", 1.0))
                 pixelunit = samplestore.attrs.get("pixelunit", "um")
-                if active_mask == "":
-                    active_mask = None
                 # data
                 mapstore = samplestore.get("maps")
                 for element in mapstore.keys():
@@ -111,6 +110,7 @@ class MapStore:
                 aspect=aspect,
                 masks=masks,
                 active_mask=active_mask,
+                cluster_mask=cluster_mask,
                 clusters=clusters,
                 centers=centers,
                 legend=legend,
@@ -144,10 +144,10 @@ class MapStore:
                 samplestore.attrs["aspect"] = sample.aspect
                 samplestore.attrs["pixelsize"] = sample.pixelsize
                 samplestore.attrs["pixelunit"] = sample.pixelunit
-                if sample.active_mask is None:
-                    samplestore.attrs["active_mask"] = ""
-                else:
+                if sample.active_mask is not None:
                     samplestore.attrs["active_mask"] = sample.active_mask
+                if sample.cluster_mask is not None:
+                    samplestore.attrs["cluster_mask"] = sample.cluster_mask
                 mapstore = samplestore.create_group("maps")
                 for element in sample.maps:
                     mapstore.create_dataset(
@@ -283,6 +283,7 @@ class Mapset:
         maps (list): List of all available maps in sample.
         masks (list): List of all available masks in sample.
         active_mask (str): Name of active mask or None.
+        cluster_mask (str): Name of mask used during clustering or None.
         element_maps (list): List of all elemental maps in sample.
         total_counts (nump.ndarray): 2d array of total elemental count. It is
             sum of all elemental maps.
@@ -318,6 +319,7 @@ class Mapset:
                 self.__active_mask = kwargs["active_mask"]
         self.name = kwargs.get("name", "default")
         self.aspect = kwargs.get("aspect", 1)
+        self.cluster_mask = kwargs.get("cluster_mask", None)
         self.clusters = kwargs.get("clusters", None)
         self.centers = kwargs.get("centers", None)
         self.legend = kwargs.get("legend", MapLegend())
@@ -328,14 +330,7 @@ class Mapset:
         self.transpose = kwargs.get("transpose", False)
         self.reset_default_mask()
         if self.clusters is not None:
-            try:
-                self.aggclusters()
-            except ValueError:
-                self.__active_mask = None
-                self.aggclusters()
-                if "active_mask" in kwargs:
-                    if kwargs["active_mask"] in self.__masks:
-                        self.__active_mask = kwargs["active_mask"]
+            self.aggclusters()
 
     def __repr__(self):
         return (
@@ -713,6 +708,9 @@ class Mapset:
             filename (str): If provided, the figure is saved to file. Default None.
             clip (bool): If True, user can provide by mouse the rectangular area used
                 for clipping. Clipped sample is returned.
+            ax (Axes): use this axes for plotting. Default None.
+            show (bool): When False, plot is not shown and other plot could be added.
+                Default True.
 
         """
 
@@ -898,6 +896,8 @@ class Mapset:
         Additional keyword arguments are passed to aggclusters() method.
 
         """
+        # reset temporary default mask
+        self.reset_default_mask()
         n_kmeans = kwargs.get("n_kmeans", 256)
         ignore = kwargs.get("ignore", [])
         random_state = kwargs.get("random_state", None)
@@ -926,6 +926,7 @@ class Mapset:
         self.clusters = kmeans.fit_predict(dt)
         self.centers = kmeans.cluster_centers_
         self.legend = MapLegend(**kwargs)
+        self.cluster_mask = self.active_mask
         self.aggclusters(**kwargs)
 
     def aggclusters(self, **kwargs):
@@ -957,7 +958,10 @@ class Mapset:
             agg[self.clusters == ix] = self.labels[ix]
 
         self.img = np.full(self.shape, np.nan)
-        self.img[np.invert(self.mask)] = agg
+        if self.cluster_mask is None:
+            self.img.flat = agg
+        else:
+            self.img[np.invert(self.__masks[self.cluster_mask])] = agg
         if n_clusters != self.legend.n_clusters:
             self.legend = MapLegend(**kwargs)
 
