@@ -767,6 +767,8 @@ class Mapset:
             bgcmap = plt.get_cmap(kwargs.get("background_cmap", "grey"))
             bgcmap.set_under(kwargs.get("bgunder", bgcmap(0.0)))
             bgcmap.set_over(kwargs.get("bgover", bgcmap(1.0)))
+            cmap.set_under(alpha=0)
+            cmap.set_over(alpha=0)
             if "bgmasked" in kwargs:
                 bgcmap.set_bad(kwargs.get("bgmasked"))
             else:
