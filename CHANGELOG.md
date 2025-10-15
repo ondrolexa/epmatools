@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2025-10-15
+### Fixed
+- default mask reimplemented
+
 ## [0.3.0] - 2025-10-15
 ### Changed
 - store clusters for each mask separately

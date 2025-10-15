@@ -84,6 +84,7 @@ class MapStore:
                 cluster_mask = samplestore.attrs.get("cluster_mask", None)
                 pixelsize = float(samplestore.attrs.get("pixelsize", 1.0))
                 pixelunit = samplestore.attrs.get("pixelunit", "um")
+                cmap = samplestore.attrs.get("cmap", "inferno")
                 # data
                 mapstore = samplestore.get("maps")
                 for element in mapstore.keys():
@@ -92,7 +93,10 @@ class MapStore:
                 maskstore = samplestore.get("masks")
                 for mask in maskstore.keys():
                     vals = np.array(maskstore.get(mask))
-                    masks[mask] = vals
+                    if mask == "_":
+                        masks[None] = vals
+                    else:
+                        masks[mask] = vals
                 kmeans = {}
                 if "kmeans" in samplestore:
                     if version > "0.2.0":
@@ -146,6 +150,7 @@ class MapStore:
                 kmeans=kmeans,
                 pixelsize=pixelsize,
                 pixelunit=pixelunit,
+                cmap=cmap,
             )
         else:
             print(f"Mapset {name} is not in MapStore.")
@@ -171,10 +176,10 @@ class MapStore:
             with h5py.File(self.h5file, "a") as hf:
                 samplestore = hf.create_group(sample.name)
                 samplestore.attrs["version"] = epmatools.__version__
-                samplestore.attrs["shape"] = sample.shape
                 samplestore.attrs["aspect"] = sample.aspect
                 samplestore.attrs["pixelsize"] = sample.pixelsize
                 samplestore.attrs["pixelunit"] = sample.pixelunit
+                samplestore.attrs["cmap"] = sample.default_cmap
                 if sample.active_mask is not None:
                     samplestore.attrs["active_mask"] = sample.active_mask
                 mapstore = samplestore.create_group("maps")
@@ -184,9 +189,21 @@ class MapStore:
                     )
                 maskstore = samplestore.create_group("masks")
                 for mask in sample.masks:
-                    maskstore.create_dataset(
-                        mask, data=sample.get_mask(mask), compression="gzip", dtype=bool
-                    )
+                    if mask is None:
+                        if np.any(sample.get_mask(mask)):
+                            maskstore.create_dataset(
+                                "_",
+                                data=sample.get_mask(mask),
+                                compression="gzip",
+                                dtype=bool,
+                            )
+                    else:
+                        maskstore.create_dataset(
+                            mask,
+                            data=sample.get_mask(mask),
+                            compression="gzip",
+                            dtype=bool,
+                        )
                 if sample.has_clusters:
                     kmeanstore = samplestore.create_group("kmeans")
                     for group, clusters in sample.kmeans.items():
@@ -355,6 +372,8 @@ class Mapset:
         self.__maps = maps
         # defaults
         self.__masks = kwargs.get("masks", {})
+        if None not in self.__masks:
+            self.__masks[None] = kwargs.get("default_mask", np.full(self.shape, False))
         self.__active_mask = None
         if "active_mask" in kwargs:
             if kwargs["active_mask"] in self.__masks:
@@ -418,7 +437,7 @@ class Mapset:
 
     @active_mask.setter
     def active_mask(self, name):
-        if (name in self.__masks) or (name is None):
+        if name in self.__masks:
             if name != self.__active_mask:
                 self.__active_mask = name
                 if self.clusters is not None:
@@ -467,7 +486,7 @@ class Mapset:
             tc += self[el]
         return tc
 
-    def get_map(self, expr=None):
+    def get_map(self, expr=None, invert_mask=False):
         """Returns map as 2D numpy.ndarray with np.nan as masked values.
 
         Keyword Args:
@@ -478,13 +497,21 @@ class Mapset:
         """
         if expr in self:
             dt = self[expr]
-            dt[self.mask] = np.nan
+            if invert_mask:
+                dt[~self.mask] = np.nan
+            else:
+                dt[self.mask] = np.nan
         elif (expr is None) or (expr == ""):
             dt = self.total_counts
-            dt[self.mask] = np.nan
+            if invert_mask:
+                dt[~self.mask] = np.nan
+            else:
+                dt[self.mask] = np.nan
         else:
             for el in self.maps:
-                expr = expr.replace(el, f'self.get_map("{el}")')
+                expr = expr.replace(
+                    el, f'self.get_map("{el}", invert_mask={invert_mask})'
+                )
             try:
                 dt = eval(expr)
             except NameError:
@@ -527,10 +554,7 @@ class Mapset:
 
     @property
     def mask(self):
-        if self.active_mask is None:
-            return np.full(self.shape, False)
-        else:
-            return self.__masks[self.active_mask]
+        return self.__masks[self.active_mask].copy()
 
     @property
     def masks(self):
@@ -539,6 +563,12 @@ class Mapset:
     def deactivate_mask(self):
         """Deactivate active mask."""
         self.active_mask = None
+
+    def set_default_mask(self):
+        """Set active mask as default mask, i.e. always merged with active one"""
+        if self.active_mask is not None:
+            self.__masks[None] = self.mask
+            self.__kmeans[None] = self.__kmeans[self.active_mask]
 
     def get_mask(self, name):
         """Get mask by name.
@@ -550,23 +580,26 @@ class Mapset:
         if name in self.__masks:
             return self.__masks[name].copy()
         else:
-            print(f"Mask {name} not exists in sample")
+            print(f"Mask {name} not available")
             print(f"Available masks: {self.masks}")
 
     def invert_mask(self):
         """Invert active mask.
 
+        Note: Existing clusters will be removed
+
         Args:
             name (str): Name of the mask
 
         """
-        if self.active_mask is not None:
-            self.__masks[self.active_mask] = ~self.__masks[self.active_mask]
-        else:
-            print("No active mask")
+        self.__masks[self.active_mask] = ~self.__masks[self.active_mask]
+        if self.active_mask in self.__kmeans:
+            del self.__kmeans[self.active_mask]
 
     def modify_mask_add(self, name):
         """Modify active mask as logical_and with mask name
+
+        Note: Existing clusters will be removed
 
         Args:
             name (str): Name of the mask
@@ -576,9 +609,13 @@ class Mapset:
         self.__masks[self.active_mask] = np.logical_and(
             self.__masks[self.active_mask], mask2
         )
+        if self.active_mask in self.__kmeans:
+            del self.__kmeans[self.active_mask]
 
     def modify_mask_or(self, name):
         """Modify active mask as logical_or with mask name
+
+        Note: Existing clusters will be removed
 
         Args:
             name (str): Name of the mask
@@ -588,9 +625,13 @@ class Mapset:
         self.__masks[self.active_mask] = np.logical_or(
             self.__masks[self.active_mask], mask2
         )
+        if self.active_mask in self.__kmeans:
+            del self.__kmeans[self.active_mask]
 
     def modify_mask_xor(self, name):
         """Modify active mask as logical_xor with mask name
+
+        Note: Existing clusters will be removed
 
         Args:
             name (str): Name of the mask
@@ -600,6 +641,8 @@ class Mapset:
         self.__masks[self.active_mask] = np.logical_xor(
             self.__masks[self.active_mask], mask2
         )
+        if self.active_mask in self.__kmeans:
+            del self.__kmeans[self.active_mask]
 
     def add_mask(self, name, mask, **kwargs):
         """Add mask to sample masks
@@ -631,12 +674,36 @@ class Mapset:
                 self.active_mask = name
 
     def remove_mask(self, name):
-        if name in self.__masks:
-            del self.__masks[name]
-            if self.active_mask == name:
-                self.active_mask = None
+        """Remove mask
+
+        Note: Existing clusters will be also removed
+
+        Args:
+            name (str): Name of the mask
+
+        """
+        if name is not None:
+            if name in self.__masks:
+                del self.__masks[name]
+                if name in self.__kmeans:
+                    del self.__kmeans[name]
+                if self.active_mask == name:
+                    self.active_mask = None
+            else:
+                print(f"Mask {name} not found in sample masks")
         else:
-            print(f"Mask {name} not found in sample masks")
+            print("Default mask could not be removed")
+
+    def rename_mask(self, name):
+        """Rename active mask"""
+        if name not in self.__masks:
+            self.__masks[name] = self.__masks[self.active_mask]
+            del self.__masks[self.active_mask]
+            if self.active_mask in self.__kmeans:
+                self.__kmeans[name] = self.__kmeans[self.active_mask]
+                del self.__kmeans[self.active_mask]
+        else:
+            print(f"Mask {name} already exists")
 
     def draw_mask(self, name, expr=None, **kwargs):
         """Create mask by drawing polygon
@@ -701,6 +768,8 @@ class Mapset:
             self.__masks[name] = np.invert(mask)
         else:
             self.__masks[name] = mask
+        if name in self.__kmeans:
+            del self.__kmeans[name]
         if kwargs.get("activate", True):
             self.active_mask = name
 
@@ -726,7 +795,7 @@ class Mapset:
         for element in self.maps:
             maps[element] = self[element][rmin:rmax, cmin:cmax]
         masks = {}
-        for mask in self.masks:
+        for mask in self.__masks:
             masks[mask] = self.get_mask(mask)[rmin:rmax, cmin:cmax]
         kwargs["masks"] = masks
         if "active_mask" not in kwargs:
@@ -833,10 +902,8 @@ class Mapset:
         ax.set_aspect(self.aspect)
         dt_masked = np.ma.masked_where(self.mask | np.isnan(dt) | np.isinf(dt), dt)
         if background is not None:
-            self.invert_mask()
-            bg = self.get_map(background)
-            bg_masked = np.ma.masked_where(self.mask | np.isnan(bg) | np.isinf(bg), bg)
-            self.invert_mask()
+            bg = self.get_map(background, invert_mask=True)
+            bg_masked = np.ma.masked_where(~self.mask | np.isnan(bg) | np.isinf(bg), bg)
             vmin = np.nanpercentile(bg, bgcdfclip[0])
             vmax = np.nanpercentile(bg, bgcdfclip[1])
             bgnorm = colors.Normalize(vmin=vmin, vmax=vmax)
@@ -1036,7 +1103,7 @@ class Mapset:
         self.img = np.full(self.shape, np.nan)
         self.img[np.invert(self.mask)] = agg
         if n_clusters != self.legend.n_clusters:
-            self.legend = MapLegend(**kwargs)
+            self.__kmeans[self.active_mask]["legend"] = MapLegend(**kwargs)
 
     def label_df(self, counts=False):
         """Return averaged values for each label of Agglomerative clustering
@@ -1236,7 +1303,7 @@ class Mapset:
             kwargs["n_clusters"] = len(np.unique(self.labels))
         Z = self.dendrogram(calc_linkage=True, **kwargs)
         pix = hierarchy.cut_tree(Z, n_clusters=n_phases)[:, 0]
-        self.legend = MapLegend(**kwargs)
+        self.__kmeans[self.active_mask]["legend"] = MapLegend(**kwargs)
         norm = colors.Normalize(vmin=0, vmax=n_phases - 1)
         for ix in range(n_phases):
             vals = [v.item() for v in np.where(pix == ix)[0]]
@@ -1244,7 +1311,7 @@ class Mapset:
 
     def clear_legend(self):
         """Clear legend"""
-        self.legend = MapLegend()
+        self.__kmeans[self.active_mask]["legend"] = MapLegend()
 
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
