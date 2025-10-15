@@ -2,12 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [master] - 2025-10-14
-### Fixed
-- keep cluster_mask attr in MapStore
+## [0.3.0] - 2025-10-15
+### Changed
+- store clusters for each mask separately
+- default_mask property removed
+### Added
 - scalebar added
 - masks logical operations added
 - dendrogram and autolegend implemented
+### Fixed
+- show background fixed
 
 ## [0.2.0] - 2025-03-13
 ### Fixed
