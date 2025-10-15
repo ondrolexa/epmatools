@@ -1,6 +1,6 @@
 [project]
 name = "epmatools"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Tools to manipulate EPMA analyses"
 readme = "README.md"
 maintainers = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
@@ -43,6 +43,9 @@ dev = ["epmatools[extra,tests,docs]", "black"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "epmatools/__init__.py"
 
 [tool.black]
 line-length = 88

@@ -18,6 +18,7 @@ from scipy import stats
 from scipy.cluster import hierarchy
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.preprocessing import FunctionTransformer
+import epmatools
 
 
 class MapStore:
@@ -76,6 +77,7 @@ class MapStore:
                 maps = {}
                 masks = {}
                 samplestore = hf.get(name)
+                version = samplestore.attrs.get("version", "0.2.0")
                 # attributes
                 aspect = float(samplestore.attrs["aspect"])
                 active_mask = samplestore.attrs.get("active_mask", None)
@@ -91,29 +93,57 @@ class MapStore:
                 for mask in maskstore.keys():
                     vals = np.array(maskstore.get(mask))
                     masks[mask] = vals
+                kmeans = {}
                 if "kmeans" in samplestore:
-                    kmeanstore = samplestore.get("kmeans")
-                    clusters = np.array(kmeanstore.get("clusters"))
-                    centers = np.array(kmeanstore.get("centers"))
-                    n_clusters = int(kmeanstore.attrs["n_clusters"])
-                    legend = MapLegend(n_clusters=n_clusters)
-                    store = json.loads(kmeanstore.attrs["store"])
-                    for label, v in store.items():
-                        legend.add(label, v["color"], v["values"])
-                else:
-                    clusters = None
-                    centers = None
-                    legend = None
+                    if version > "0.2.0":
+                        kmeanstore = samplestore.get("kmeans")
+                        for group in kmeanstore.keys():
+                            clusterstore = kmeanstore.get(group)
+                            if group == "_":
+                                key = None
+                            else:
+                                key = group
+                            kmeans[key] = {}
+                            kmeans[key]["clusters"] = np.array(
+                                clusterstore.get("clusters")
+                            )
+                            kmeans[key]["centers"] = np.array(
+                                clusterstore.get("centers")
+                            )
+                            n_clusters = int(clusterstore.attrs["n_clusters"])
+                            kmeans[key]["legend"] = MapLegend(n_clusters=n_clusters)
+                            store = json.loads(clusterstore.attrs["store"])
+                            for label, v in store.items():
+                                kmeans[key]["legend"].add(
+                                    label, v["color"], v["values"]
+                                )
+
+                    else:
+                        kmeans[cluster_mask] = {}
+                        kmeanstore = samplestore.get("kmeans")
+                        kmeans[cluster_mask]["clusters"] = np.array(
+                            kmeanstore.get("clusters")
+                        )
+                        kmeans[cluster_mask]["centers"] = np.array(
+                            kmeanstore.get("centers")
+                        )
+                        n_clusters = int(kmeanstore.attrs["n_clusters"])
+                        kmeans[cluster_mask]["legend"] = MapLegend(
+                            n_clusters=n_clusters
+                        )
+                        store = json.loads(kmeanstore.attrs["store"])
+                        for label, v in store.items():
+                            kmeans[cluster_mask]["legend"].add(
+                                label, v["color"], v["values"]
+                            )
+
             return Mapset(
                 maps,
                 name=name,
                 aspect=aspect,
                 masks=masks,
                 active_mask=active_mask,
-                cluster_mask=cluster_mask,
-                clusters=clusters,
-                centers=centers,
-                legend=legend,
+                kmeans=kmeans,
                 pixelsize=pixelsize,
                 pixelunit=pixelunit,
             )
@@ -140,14 +170,13 @@ class MapStore:
         if sample.name not in self.samples:
             with h5py.File(self.h5file, "a") as hf:
                 samplestore = hf.create_group(sample.name)
+                samplestore.attrs["version"] = epmatools.__version__
                 samplestore.attrs["shape"] = sample.shape
                 samplestore.attrs["aspect"] = sample.aspect
                 samplestore.attrs["pixelsize"] = sample.pixelsize
                 samplestore.attrs["pixelunit"] = sample.pixelunit
                 if sample.active_mask is not None:
                     samplestore.attrs["active_mask"] = sample.active_mask
-                if sample.cluster_mask is not None:
-                    samplestore.attrs["cluster_mask"] = sample.cluster_mask
                 mapstore = samplestore.create_group("maps")
                 for element in sample.maps:
                     mapstore.create_dataset(
@@ -158,16 +187,29 @@ class MapStore:
                     maskstore.create_dataset(
                         mask, data=sample.get_mask(mask), compression="gzip", dtype=bool
                     )
-                if sample.clusters is not None:
+                if sample.has_clusters:
                     kmeanstore = samplestore.create_group("kmeans")
-                    kmeanstore.create_dataset(
-                        "clusters", data=sample.clusters, compression="gzip", dtype=int
-                    )
-                    kmeanstore.create_dataset(
-                        "centers", data=sample.centers, compression="gzip", dtype=float
-                    )
-                    kmeanstore.attrs["n_clusters"] = sample.legend.n_clusters
-                    kmeanstore.attrs["store"] = json.dumps(sample.legend.store)
+                    for group, clusters in sample.kmeans.items():
+                        if group is None:
+                            clusterstore = kmeanstore.create_group("_")
+                        else:
+                            clusterstore = kmeanstore.create_group(group)
+                        clusterstore.create_dataset(
+                            "clusters",
+                            data=clusters["clusters"],
+                            compression="gzip",
+                            dtype=int,
+                        )
+                        clusterstore.create_dataset(
+                            "centers",
+                            data=clusters["centers"],
+                            compression="gzip",
+                            dtype=float,
+                        )
+                        clusterstore.attrs["n_clusters"] = clusters["legend"].n_clusters
+                        clusterstore.attrs["store"] = json.dumps(
+                            clusters["legend"].store
+                        )
 
                 self.samples = list(hf.keys())
                 print(f"{sample.name} saved.")
@@ -319,24 +361,19 @@ class Mapset:
                 self.__active_mask = kwargs["active_mask"]
         self.name = kwargs.get("name", "default")
         self.aspect = kwargs.get("aspect", 1)
-        self.cluster_mask = kwargs.get("cluster_mask", None)
-        self.clusters = kwargs.get("clusters", None)
-        self.centers = kwargs.get("centers", None)
-        self.legend = kwargs.get("legend", MapLegend())
+        self.__kmeans = kwargs.get("kmeans", {})
         self.default_cmap = kwargs.get("cmap", "inferno")
         self.figsize = kwargs.get("figsize", (8, 6))
         self.pixelsize = kwargs.get("pixelsize", 1)
         self.pixelunit = kwargs.get("pixelunit", "um")
         self.transpose = kwargs.get("transpose", False)
-        self.reset_default_mask()
         if self.clusters is not None:
             self.aggclusters()
 
     def __repr__(self):
-        return (
-            f"Mapset {self.name} with {len(self.__maps)} {self.shape} maps. "
-            f"Active mask {self.active_mask}."
-        )
+        res = f"Mapset {self.name} with {len(self.__maps)} {self.shape} maps."
+        if self.active_mask is not None:
+            res += f" Active mask {self.active_mask}."
 
     def __getitem__(self, name):
         if name in self:
@@ -382,7 +419,10 @@ class Mapset:
     @active_mask.setter
     def active_mask(self, name):
         if (name in self.__masks) or (name is None):
-            self.__active_mask = name
+            if name != self.__active_mask:
+                self.__active_mask = name
+                if self.clusters is not None:
+                    self.aggclusters()
         else:
             print(f"Mask {name} not exists in sample.")
 
@@ -404,6 +444,21 @@ class Mapset:
     def element_maps(self):
         all_elements = [el.symbol for el in periodictable.elements]
         return [el for el in self.maps if el in all_elements]
+
+    @property
+    def has_clusters(self):
+        if self.__kmeans:
+            return True
+        else:
+            return False
+
+    @property
+    def clustered(self):
+        res = {None: True if None in self.__kmeans else False}
+        res.update(
+            {mask: True if mask in self.__kmeans else False for mask in self.masks}
+        )
+        return res
 
     @property
     def total_counts(self):
@@ -446,19 +501,40 @@ class Mapset:
         return dt
 
     @property
+    def kmeans(self):
+        return self.__kmeans.copy()
+
+    @property
+    def clusters(self):
+        if self.active_mask in self.__kmeans:
+            return self.__kmeans[self.active_mask]["clusters"]
+        else:
+            return None
+
+    @property
+    def centers(self):
+        if self.active_mask in self.__kmeans:
+            return self.__kmeans[self.active_mask]["centers"]
+        else:
+            return None
+
+    @property
+    def legend(self):
+        if self.active_mask in self.__kmeans:
+            return self.__kmeans[self.active_mask]["legend"]
+        else:
+            return MapLegend()
+
+    @property
     def mask(self):
         if self.active_mask is None:
-            return np.logical_or(self.default_mask, np.full(self.shape, False))
+            return np.full(self.shape, False)
         else:
-            return np.logical_or(self.default_mask, self.__masks[self.active_mask])
+            return self.__masks[self.active_mask]
 
     @property
     def masks(self):
         return list(self.__masks.keys())
-
-    def reset_default_mask(self):
-        """Reset default mask."""
-        self.default_mask = np.full(self.shape, False)
 
     def deactivate_mask(self):
         """Deactivate active mask."""
@@ -897,8 +973,6 @@ class Mapset:
         Additional keyword arguments are passed to aggclusters() method.
 
         """
-        # reset temporary default mask
-        self.reset_default_mask()
         n_kmeans = kwargs.get("n_kmeans", 256)
         ignore = kwargs.get("ignore", [])
         random_state = kwargs.get("random_state", None)
@@ -924,10 +998,11 @@ class Mapset:
             random_state=random_state,
         )
         print("Clustering, please wait...")
-        self.clusters = kmeans.fit_predict(dt)
-        self.centers = kmeans.cluster_centers_
-        self.legend = MapLegend(**kwargs)
-        self.cluster_mask = self.active_mask
+        if self.active_mask not in self.__kmeans:
+            self.__kmeans[self.active_mask] = {}
+        self.__kmeans[self.active_mask]["clusters"] = kmeans.fit_predict(dt)
+        self.__kmeans[self.active_mask]["centers"] = kmeans.cluster_centers_
+        self.__kmeans[self.active_mask]["legend"] = MapLegend(**kwargs)
         self.aggclusters(**kwargs)
 
     def aggclusters(self, **kwargs):
@@ -959,10 +1034,7 @@ class Mapset:
             agg[self.clusters == ix] = self.labels[ix]
 
         self.img = np.full(self.shape, np.nan)
-        if self.cluster_mask is None:
-            self.img.flat = agg
-        else:
-            self.img[np.invert(self.__masks[self.cluster_mask])] = agg
+        self.img[np.invert(self.mask)] = agg
         if n_clusters != self.legend.n_clusters:
             self.legend = MapLegend(**kwargs)
 
@@ -973,7 +1045,7 @@ class Mapset:
             counts (bool): If True, Counts column is added. Default False
 
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
         df = self.element_df.copy()
         df["Label"] = self.labels[self.clusters]
         if counts:
@@ -990,7 +1062,7 @@ class Mapset:
             counts (bool): If True, Counts column is added. Default False
 
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
         mask = np.invert(self.mask)
         assert phase in self.legend.store, f"Phase {phase} not found in legend."
         pmask = np.zeros_like(self.img, dtype=bool)
@@ -1020,7 +1092,7 @@ class Mapset:
             counts (bool): Include total counts. Deafult True
             prop (bool): include class proportion. Deafult True
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
         agg = {e: "mean" for e in self.element_maps}
         g = self.label_df(counts=True).groupby("Label")
         res = g.agg(agg)
@@ -1051,7 +1123,7 @@ class Mapset:
             counts (bool): Include total counts. Deafult True
             prop (bool): include phase proportion. Deafult True
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
         dfs = []
         if self.legend.store:
             for phase in self.legend.store:
@@ -1089,7 +1161,7 @@ class Mapset:
             invert (bool): Invert mask. Default False
 
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters() method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
         mask = np.full(self.img.shape, False)
         for v in args:
             mask = np.logical_or(mask, self.img == v)
@@ -1186,7 +1258,7 @@ class Mapset:
             filename (str): If provided, the figure is saved to file. Default None.
 
         """
-        assert self.labels is not None, "Not aggregated. Use aggclusters method."
+        assert self.clusters is not None, "Not clustered. Use create_clusters() method."
 
         def format_coord(x, y) -> str:
             col = round(x)
@@ -1221,7 +1293,7 @@ class Mapset:
             else:
                 return "error"
 
-        figsize = kwargs.get("figsize", (8, 6))
+        figsize = kwargs.get("figsize", (9, 6))
         transpose = kwargs.get("transpose", self.transpose)
         f, ax = plt.subplots(figsize=figsize)
         ax.set_aspect(self.aspect)
