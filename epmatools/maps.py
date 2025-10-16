@@ -246,6 +246,26 @@ class MapStore:
                 self.samples = list(hf.keys())
                 print(f"Mapset {name} deleted.")
 
+    def rename_sample(self, name, newname):
+        """RTename sample in MapStore
+
+        Args:
+            name (str): Name of the sample to be renamed
+            newname (str):  New name
+
+        """
+        if name not in self.samples:
+            print(f"Mapset {name} is not in MapStore.")
+        else:
+            if newname in self.samples:
+                print(f"Mapset {newname} already exists.")
+            else:
+                with h5py.File(self.h5file, "a") as hf:
+                    hf[newname] = hf[name]
+                    del hf[name]
+                    self.samples = list(hf.keys())
+                    print(f"Mapset {name} renamed to {newname}.")
+
     def update_legend(self, sample):
         """Update stored legend to the one from the sample.
 
@@ -393,6 +413,7 @@ class Mapset:
         res = f"Mapset {self.name} with {len(self.__maps)} {self.shape} maps."
         if self.active_mask is not None:
             res += f" Active mask {self.active_mask}."
+        return res
 
     def __getitem__(self, name):
         if name in self:
@@ -1035,14 +1056,14 @@ class Mapset:
             log1p (bool): Logarithmic transform of values before clustering.
                 Default False
             random_state (int): Determines random number generation for
-                centroid initialization. Default None.
+                centroid initialization. Default 42.
 
         Additional keyword arguments are passed to aggclusters() method.
 
         """
         n_kmeans = kwargs.get("n_kmeans", 256)
         ignore = kwargs.get("ignore", [])
-        random_state = kwargs.get("random_state", None)
+        random_state = kwargs.get("random_state", 42)
         if kwargs.get("only_elements", True):
             dt = pd.DataFrame(
                 {el: self.values(el) for el in self.element_maps if el not in ignore}

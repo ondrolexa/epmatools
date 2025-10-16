@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2025-10-16
+### Fixed
+- repr for Mapset fixed
+### Added
+- rename_sample added to MapStore methods
+
 ## [0.3.1] - 2025-10-15
 ### Fixed
 - default mask reimplemented
