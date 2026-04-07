@@ -16,7 +16,7 @@ import pandas as pd
 import h5py
 from scipy import stats
 from scipy.cluster import hierarchy
-from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.cluster import KMeans, AgglomerativeClustering, BisectingKMeans
 from sklearn.preprocessing import FunctionTransformer
 import epmatools
 
@@ -1047,6 +1047,7 @@ class Mapset:
 
         Keyword Args:
             n_kmeans (int): Number of clusters to be created. Default 256
+            bisect (bool): Use bisecting K-Means clustering. Default True
             ignore (list): List of elements to be ignored for KMeans
                 clustering. Default []
             only_elements (bool): Use only elemental maps. Defaut True
@@ -1079,12 +1080,20 @@ class Mapset:
                 np.log1p, validate=True, feature_names_out="one-to-one"
             ).fit(dt)
             dt = pd.DataFrame(tr.transform(dt), columns=tr.get_feature_names_out())
-        kmeans = KMeans(
-            n_clusters=n_kmeans,
-            init="k-means++",
-            n_init="auto",
-            random_state=random_state,
-        )
+        if kwargs.get("bisect", True):
+            kmeans = BisectingKMeans(
+                n_clusters=n_kmeans,
+                init="k-means++",
+                n_init=1,
+                random_state=random_state,
+            )
+        else:
+            kmeans = KMeans(
+                n_clusters=n_kmeans,
+                init="k-means++",
+                n_init="auto",
+                random_state=random_state,
+            )
         print("Clustering, please wait...")
         if self.active_mask not in self.__kmeans:
             self.__kmeans[self.active_mask] = {}
@@ -1332,7 +1341,9 @@ class Mapset:
 
     def clear_legend(self):
         """Clear legend"""
-        self.__kmeans[self.active_mask]["legend"] = MapLegend()
+        self.__kmeans[self.active_mask]["legend"] = MapLegend(
+            n_clusters=len(np.unique(self.labels))
+        )
 
     def phasemap(self, **kwargs):
         """Show phase map using sample legend.
