@@ -1344,6 +1344,7 @@ class Mapset:
             sb_kwargs (dict): Scale bar keyword args. Default {}
             transpose (bool): Whether to transpose the map. Default is Mapset.transpose
             filename (str): If provided, the figure is saved to file. Default None.
+            dpi (int): Image resolution when saved to file. Default 300.
 
         """
         assert self.clusters is not None, "Not clustered. Use create_clusters() method."
@@ -1409,7 +1410,9 @@ class Mapset:
         filename = kwargs.get("filename", None)
         f.tight_layout()
         if filename is not None:
-            f.savefig(filename, dpi=300, bbox_inches="tight", pad_inches=0)
+            f.savefig(
+                filename, dpi=kwargs.get("dpi", 300), bbox_inches="tight", pad_inches=0
+            )
             plt.close(f)
         else:
             plt.show()
@@ -1553,7 +1556,7 @@ class MapLegend:
             color
         ), "color must be matplotlib named color or RGB tuple"
         if phase in self.store:
-            self.store[phase]["color"] = colors.to_rgb(color)
+            self.store[phase]["color"] = color
 
     @property
     def unlabeled(self):
